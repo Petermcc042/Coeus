@@ -2,7 +2,6 @@ package main
 
 import "core:fmt"
 import "core:os"
-import "core:unicode/utf8"
 import rl "vendor:raylib"
 
 Window :: struct {
@@ -13,7 +12,17 @@ Window :: struct {
 }
 
 App :: struct {
-	pause: bool,
+	pause:                bool,
+	textView:             TextView,
+	footer:               Footer,
+
+	// input state
+	left_mouse_clicked:   bool,
+	right_mouse_clicked:  bool,
+	toggle_pause:         bool,
+	mouse_world_position: i32,
+	mouse_tile_x:         i32,
+	mouse_tile_y:         i32,
 }
 
 
@@ -33,13 +42,13 @@ TextView :: struct {
 	charBlock:  CharacterBlock,
 }
 
-User_Input :: struct {
-	left_mouse_clicked:   bool,
-	right_mouse_clicked:  bool,
-	toggle_pause:         bool,
-	mouse_world_position: i32,
-	mouse_tile_x:         i32,
-	mouse_tile_y:         i32,
+Footer :: struct {
+	columns:    i32, // width in columns
+	chars:      [1000]rune,
+	rune_index: i32,
+	font:       rl.Font,
+	fontSize:   f32,
+	charBlock:  CharacterBlock,
 }
 
 
@@ -48,7 +57,9 @@ main :: proc() {
 	rl.SetConfigFlags({.WINDOW_RESIZABLE})
 	window := Window{"Adaptive Avoidance", 1280, 720, 120}
 	rl.InitWindow(window.width, window.height, window.name)
-	rl.SetTargetFPS(window.fps)
+	//rl.SetTargetFPS(window.fps)
+
+	app: App
 
 	// setup the text view data
 	textView := TextView {
@@ -58,18 +69,43 @@ main :: proc() {
 	}
 
 	load_font(&textView, 20)
-
-	defer rl.UnloadFont(textView.font)
 	defer delete(textView.chars)
 
-	user_input: User_Input
+	footer: Footer
+	create_bottom_footer(&footer)
 
 	for !rl.WindowShouldClose() {
-		update_loop(&textView, textView.charBlock, &user_input)
+		update_loop(&textView, textView.charBlock, &app, &footer)
 	}
 
+	rl.UnloadFont(textView.font)
 	rl.CloseWindow()
 }
+
+create_bottom_footer :: proc(footer: ^Footer) {
+
+	footer.font = rl.LoadFontEx(
+		"JetBrainsMono-2.304/fonts/ttf/JetBrainsMono-Regular.ttf",
+		15,
+		nil,
+		0,
+	)
+
+	footer.rune_index = 0
+	footer.fontSize = 15
+	charSpacing := f32(2)
+	charSize := rl.MeasureTextEx(footer.font, "A", footer.fontSize, charSpacing)
+
+	footer.charBlock = CharacterBlock {
+		width  = charSize.x,
+		height = charSize.y,
+	}
+
+	new_win_w := f32(rl.GetScreenWidth())
+
+	footer.columns = i32(new_win_w / footer.charBlock.width)
+}
+
 
 load_font :: proc(textView: ^TextView, fontSize: f32) {
 	textView.font = rl.LoadFontEx(
@@ -91,27 +127,30 @@ load_font :: proc(textView: ^TextView, fontSize: f32) {
 	update_app_dimensions(textView)
 }
 
-update_loop :: proc(textView: ^TextView, charBlock: CharacterBlock, user_input: ^User_Input) {
+update_loop :: proc(textView: ^TextView, charBlock: CharacterBlock, app: ^App, footer: ^Footer) {
 	// 3. Check for Resize
 	if rl.IsWindowResized() {
 		update_app_dimensions(textView)
 	}
 
-	process_user_input(user_input, textView, charBlock)
+	process_user_input(app, textView, charBlock)
 
 	rl.BeginDrawing()
+
+	// render backgrounds
 	rl.ClearBackground(rl.BLACK)
+	draw_cursor(app, charBlock)
+	draw_bottom_footer(footer)
 
-	paneStart := f32(rl.GetScreenWidth()) / 2
 
-	// Draw Terminal
+	// Draw Text
 	for y in 0 ..< textView.rows {
 		for x in 0 ..< textView.columns {
 			index := y * textView.columns + x
 			if index >= i32(len(textView.chars)) do break
 
 			char := textView.chars[index]
-			pos := rl.Vector2{f32(x) * charBlock.width + paneStart, f32(y) * charBlock.height}
+			pos := rl.Vector2{f32(x) * charBlock.width, f32(y) * charBlock.height}
 
 			if char != 0 {
 				rl.DrawTextCodepoint(textView.font, char, pos, textView.fontSize, rl.WHITE)
@@ -119,8 +158,7 @@ update_loop :: proc(textView: ^TextView, charBlock: CharacterBlock, user_input: 
 		}
 	}
 
-	draw_cursor(user_input, charBlock)
-	rl.DrawFPS(10, 10)
+	//rl.DrawFPS(10, 10)
 	rl.EndDrawing()
 }
 
@@ -133,18 +171,14 @@ update_text_size :: proc(increase: bool, textView: ^TextView) {
 
 // Helper to recalculate how many characters fit and resize the buffer
 update_app_dimensions :: proc(textView: ^TextView) {
-	new_win_w := f32(rl.GetScreenWidth()) / 2
-	new_win_h := f32(rl.GetScreenHeight())
+	new_win_w := f32(rl.GetScreenWidth())
+	new_win_h := f32(rl.GetScreenHeight()) - 20
 
 	textView.columns = i32(new_win_w / textView.charBlock.width)
 	textView.rows = i32(new_win_h / textView.charBlock.height)
 }
 
-process_user_input :: proc(
-	user_input: ^User_Input,
-	textView: ^TextView,
-	charBlock: CharacterBlock,
-) {
+process_user_input :: proc(app: ^App, textView: ^TextView, charBlock: CharacterBlock) {
 	m_pos := rl.GetMousePosition()
 
 	// Calculate tile based on pixel / cell size directly
@@ -187,11 +221,11 @@ process_user_input :: proc(
 	if rl.IsMouseButtonDown(.RIGHT) && m_worl_pos < i32(len(textView.chars)) {
 		textView.chars[m_worl_pos] = 0
 	}
-	if user_input.toggle_pause {
+	if app.toggle_pause {
 		//textView.pause = !textView.pause
 	}
 
-	user_input^ = User_Input {
+	app^ = App {
 		left_mouse_clicked   = rl.IsMouseButtonDown(.LEFT),
 		right_mouse_clicked  = rl.IsMouseButtonDown(.RIGHT),
 		toggle_pause         = rl.IsKeyPressed(.SPACE),
@@ -201,15 +235,50 @@ process_user_input :: proc(
 	}
 }
 
-draw_cursor :: proc(user_input: ^User_Input, charBlock: CharacterBlock) {
+draw_cursor :: proc(app: ^App, charBlock: CharacterBlock) {
 	rect := rl.Rectangle {
-		x      = f32(user_input.mouse_tile_x) * charBlock.width,
-		y      = f32(user_input.mouse_tile_y) * charBlock.height,
+		x      = f32(app.mouse_tile_x) * charBlock.width,
+		y      = f32(app.mouse_tile_y) * charBlock.height,
 		width  = charBlock.width,
 		height = charBlock.height,
 	}
 
 	rl.DrawRectangleRec(rect, rl.Fade(rl.YELLOW, 0.4))
+}
+
+draw_bottom_footer :: proc(footer: ^Footer) {
+
+	rect := rl.Rectangle {
+		x      = 0,
+		y      = f32(rl.GetScreenHeight() - 20),
+		width  = f32(rl.GetScreenWidth()),
+		height = 20,
+	}
+
+	rl.DrawRectangleRec(rect, rl.Fade(rl.YELLOW, 0.2))
+
+
+	// 1. Get the FPS from Raylib and format it into a temporary Odin string
+	fps := rl.GetFPS()
+	fps_text := fmt.tprintf("FPS: %d", fps) // tprintf allocates on the context temporary allocator
+
+	// 2. Clear the old runes and copy the new string into your fixed rune array
+	//    (Resetting rune_index to track the actual length of your string)
+	footer.rune_index = 0
+	for r in fps_text {
+		if footer.rune_index >= 1000 do break // Prevent buffer overflow
+
+		footer.chars[footer.rune_index] = r
+
+		pos := rl.Vector2 {
+			f32(footer.rune_index) * footer.charBlock.width,
+			f32(rl.GetScreenHeight()) - 20,
+		}
+
+		rl.DrawTextCodepoint(footer.font, r, pos, footer.fontSize, rl.WHITE)
+
+		footer.rune_index += 1
+	}
 }
 
 load_file_into_view :: proc(view: ^TextView, filepath: string) {
