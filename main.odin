@@ -142,24 +142,73 @@ update_loop :: proc(textView: ^TextView, charBlock: CharacterBlock, app: ^App, f
 	draw_cursor(app, charBlock)
 	draw_bottom_footer(footer)
 
+	render_text(textView)
+	//rl.DrawFPS(10, 10)
+	rl.EndDrawing()
+}
 
-	// Draw Text
-	for y in 0 ..< textView.rows {
-		for x in 0 ..< textView.columns {
-			index := y * textView.columns + x
-			if index >= i32(len(textView.chars)) do break
+render_text :: proc(textView: ^TextView) {
 
-			char := textView.chars[index]
-			pos := rl.Vector2{f32(x) * charBlock.width, f32(y) * charBlock.height}
+	x_cell: i32 = 0
+	y_cell: i32 = 0
+
+	for char in textView.chars {
+
+		// If it's a newline, move the "pen" to the next row and reset column
+		if char == '\n' {
+			x_cell = 0
+			y_cell += 1
+			continue
+		}
+
+		// Optional: Bounds checking to avoid rendering outside the window rows
+		if y_cell >= textView.rows do break
+
+		// Render the character if it's on-screen
+		if x_cell < textView.columns {
+			pos := rl.Vector2 {
+				f32(x_cell) * textView.charBlock.width,
+				f32(y_cell) * textView.charBlock.height,
+			}
 
 			if char != 0 {
 				rl.DrawTextCodepoint(textView.font, char, pos, textView.fontSize, rl.WHITE)
 			}
 		}
+
+		// Move pen right for the next character
+		x_cell += 1
 	}
 
-	//rl.DrawFPS(10, 10)
-	rl.EndDrawing()
+	// Draw Text
+	// charIndex := 0
+	// total_chars := len(textView.chars)
+
+	// for y in 0 ..< textView.rows {
+	// 	if charIndex >= total_chars do break
+
+	// 	for x in 0 ..< textView.columns {
+	// 		//index := y * textView.columns + x
+	// 		//if index >= i32(len(textView.chars)) do break
+
+	// 		char := textView.chars[charIndex]
+	// 		charIndex += 1
+
+	// 		// If it's a newline, move the "pen" to the next row and reset column
+	// 		if char == '\n' {
+	// 			break
+	// 		}
+
+	// 		pos := rl.Vector2 {
+	// 			f32(x) * textView.charBlock.width,
+	// 			f32(y) * textView.charBlock.height,
+	// 		}
+
+	// 		if char != 0 {
+	// 			rl.DrawTextCodepoint(textView.font, char, pos, textView.fontSize, rl.WHITE)
+	// 		}
+	// 	}
+	// }
 }
 
 update_text_size :: proc(increase: bool, textView: ^TextView) {
