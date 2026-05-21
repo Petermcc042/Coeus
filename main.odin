@@ -1,8 +1,14 @@
 package main
 
 import "core:fmt"
+import "core:image/tga"
+import "core:math"
 import "core:os"
 import rl "vendor:raylib"
+
+// csv_file_name :: "testier.csv"
+csv_file_name :: "customers-500000.csv"
+// csv_file_name :: "testey.csv"
 
 Window :: struct {
 	name:   cstring,
@@ -19,8 +25,8 @@ App :: struct {
 	right_mouse_clicked:  bool,
 	toggle_pause:         bool,
 	mouse_world_position: i32,
-	mouse_tile_x:         i32,
-	mouse_tile_y:         i32,
+	mouse_charBlock_x:    i32, // the mouses character column position
+	mouse_charBlock_y:    i32, // the mouses character row position
 }
 
 // contains the info on width and height of a mono character
@@ -34,6 +40,7 @@ CharacterBlock :: struct {
 // it contains the information about what file is loaded
 CellsView :: struct {
 	preprocessed:      bool,
+	needsRendered:     bool,
 	colors:            []rl.Color,
 	fileChars:         [dynamic]rune, // the loaded file
 	rune_index:        i32,
@@ -68,9 +75,11 @@ main :: proc() {
 
 	// setup the text view data
 	cellsView := CellsView {
-		colors     = []rl.Color{rl.BLUE, rl.SKYBLUE},
-		rune_index = 0,
-		fileChars  = make([dynamic]rune, 0, 10000, context.allocator),
+		colors        = []rl.Color{rl.BLUE, rl.SKYBLUE},
+		rune_index    = 0,
+		fileChars     = make([dynamic]rune, 0, 10000, context.allocator),
+		needsRendered = true,
+		preprocessed  = false,
 	}
 
 	load_font(&cellsView, 20)
@@ -147,13 +156,38 @@ update_loop :: proc(cellsView: ^CellsView, charBlock: CharacterBlock, app: ^App,
 	rl.BeginDrawing()
 
 	// render backgrounds
-	rl.ClearBackground(rl.BLACK)
 	draw_cursor(app, charBlock)
 	draw_bottom_footer(footer, app)
 
-	render_csv(cellsView)
-	//rl.DrawFPS(10, 10)
+	process_csv(cellsView)
+	if cellsView.preprocessed && cellsView.needsRendered {
+		render_csv(cellsView)
+	}
+
+	//update_cell_width(cellsView, app)
 	rl.EndDrawing()
+
+}
+
+update_cell_width :: proc(cellsView: ^CellsView, app: ^App) {
+
+	if rl.IsMouseButtonDown(rl.MouseButton.LEFT) {
+
+		cumulativeCharWidth: i32 = 0
+		for charWidth in cellsView.cellColumnWidths {
+			cumulativeCharWidth += charWidth
+			linePos := i32(cellsView.charBlock.width) * cumulativeCharWidth
+			if f32(math.abs(rl.GetMouseX() - linePos)) < 5 {
+				rl.DrawLine(
+					i32(cellsView.charBlock.width) * cumulativeCharWidth,
+					0,
+					i32(cellsView.charBlock.width) * cumulativeCharWidth,
+					rl.GetScreenHeight(),
+					rl.RED,
+				)
+			}
+		}
+	}
 
 }
 
@@ -174,11 +208,11 @@ process_csv :: proc(cellsView: ^CellsView) {
 		}
 	}
 
-	for i in 0 ..< colCount {
-		append(&cellsView.cellColumnWidths, 7, 7, 7, 7)
+	for i := 0; i <= colCount; i += 1 {
+		append(&cellsView.cellColumnWidths, 7)
 	}
 
-	for i in 0 ..< rowCount {
+	for i := 0; i <= rowCount; i += 1 {
 		append(&cellsView.cellColumnHeights, 1)
 	}
 
@@ -186,9 +220,8 @@ process_csv :: proc(cellsView: ^CellsView) {
 }
 
 render_csv :: proc(cellsView: ^CellsView) {
-	process_csv(cellsView)
-	if !cellsView.preprocessed {return}
 
+	rl.ClearBackground(rl.DARKBLUE)
 	x_cell: i32 = 0 // keeps track of the exact character coord
 	y_cell: i32 = 0 // keeps track of the exact character coord
 
@@ -197,14 +230,18 @@ render_csv :: proc(cellsView: ^CellsView) {
 
 	fileCharIndex := 0 // keeps track of how far through the file we are
 
+	inQuotes := false
 	// loop until we have rendered all characters or
 	// at least the screen cells are filled
 	for fileCharIndex < len(cellsView.fileChars) {
 
+		if y_cell > cellsView.charRows {break}
+
 		char := cellsView.fileChars[fileCharIndex]
 		temp_char := char // re-assign the char so we can fill empty cell spots with ' '
 
-		if char == ' ' && currentCellCharIndex == 0 {
+		// if we are in the first character of a new csv cell and it starts with a blank skip it
+		if currentCellCharIndex == 0 && char == ' ' {
 			x_cell += 0 // new line x is reset back to the start of the panel
 			y_cell += 0 // the y coord needs to move one lower with a new line
 			currentColumnIndex += 0 // we are back to looking at the first cell column
@@ -213,8 +250,22 @@ render_csv :: proc(cellsView: ^CellsView) {
 			continue
 		}
 
+		// some fields have quotations to allow for commas in fields without destroying parsing
+		// we need to account for the fact there could be additional commas not designed for splitting.
+		if char == '"' {
+			inQuotes = true
+			x_cell += 0 // new line x is reset back to the start of the panel
+			y_cell += 0 // the y coord needs to move one lower with a new line
+			currentColumnIndex += 0 // we are back to looking at the first cell column
+			currentCellCharIndex += 0
+			fileCharIndex += 1 // we move past the new line char to start fresh
+			continue
+		}
+
+
 		// If it's a newline, move the "pen" to the next row and reset column
-		if char == '\n' {
+		if char == '\n' || int(currentColumnIndex) >= len(cellsView.cellColumnWidths) {
+			inQuotes = false
 			x_cell = 0 // new line x is reset back to the start of the panel
 			y_cell += 1 // the y coord needs to move one lower with a new line
 			currentColumnIndex = 0 // we are back to looking at the first cell column
@@ -223,11 +274,17 @@ render_csv :: proc(cellsView: ^CellsView) {
 			continue
 		}
 
+		// look at the current column we are in
+		// get the width of it and if our current cell char index is greater than it we can move on
+		//fmt.printfln("Character %s:  %v", char, currentColumnIndex)
 		cell_is_filled: bool =
-			(currentCellCharIndex + 1) >= cellsView.cellColumnWidths[currentColumnIndex]
+			(currentCellCharIndex) >= cellsView.cellColumnWidths[currentColumnIndex]
 
-		if char == ',' && cell_is_filled {
-			x_cell += 1 // move to the next character space
+		// if we are looping through one cell contents and it is already filled
+		// and we find a comma then it is time to move to the next cell
+		//
+		if char == ',' && cell_is_filled && inQuotes == false {
+			x_cell += 0 // counter intuitive but the loop has already moved the space +1 on the last line
 			y_cell += 0 // no need to change row
 			currentColumnIndex += 1 // we are back to looking at the first cell column
 			currentCellCharIndex = 0 // move to the next cell (char count resets)
@@ -235,16 +292,22 @@ render_csv :: proc(cellsView: ^CellsView) {
 			continue // no rendering required skip
 		}
 
-		// here we acknowledge we aren't moving to the next letter yet
-		// it is to counter balance the increment at the end of the loop
+		// here we notice that even if the next character is a comma
+		// but the cell isn't filled we need to fill the cell with a blank or something
+		// we don't want to move past the comma though so we decrement the index to
+		// stay on the commma character in the while loop
 		if char == ',' && !cell_is_filled {
 			temp_char = ' '
 			fileCharIndex -= 1
 		}
 
 		if cell_is_filled {
-			fileCharIndex += 1
-			continue
+			x_cell += 0 // counter intuitive but the loop has already moved the space +1 on the last line
+			y_cell += 0 // no need to change row
+			currentColumnIndex += 0 // we are back to looking at the first cell column
+			currentCellCharIndex += 0 // move to the next cell (char count resets)
+			fileCharIndex += 1 // we move past the new line char to start fresh
+			continue // no rendering required skip
 		}
 
 		pos := rl.Vector2 {
@@ -288,6 +351,9 @@ update_text_size :: proc(increase: bool, cellsView: ^CellsView) {
 	if (increase) {
 		new_size: f32 = cellsView.fontSize + 10
 		load_font(cellsView, new_size)
+	} else {
+		new_size: f32 = cellsView.fontSize - 10
+		load_font(cellsView, new_size)
 	}
 }
 
@@ -330,37 +396,32 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 	}
 
 	if rl.IsKeyPressed(.ENTER) {
-		load_file_into_view(cellsView, "testey.csv")
+		load_file_into_view(cellsView, csv_file_name)
 	}
 
 	if rl.IsKeyPressed(.EQUAL) && rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyPressed(.KP_ADD) {
 		update_text_size(true, cellsView)
 	}
 
-	if rl.IsMouseButtonDown(.LEFT) && m_worl_pos < i32(len(cellsView.fileChars)) {
-		cellsView.fileChars[m_worl_pos] = 'A'
+	if rl.IsKeyPressed(.MINUS) && rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyPressed(.KP_SUBTRACT) {
+		update_text_size(false, cellsView)
 	}
-	if rl.IsMouseButtonDown(.RIGHT) && m_worl_pos < i32(len(cellsView.fileChars)) {
-		cellsView.fileChars[m_worl_pos] = 0
-	}
-	if app.toggle_pause {
-		//textView.pause = !textView.pause
-	}
+
 
 	app^ = App {
 		left_mouse_clicked   = rl.IsMouseButtonDown(.LEFT),
 		right_mouse_clicked  = rl.IsMouseButtonDown(.RIGHT),
 		toggle_pause         = rl.IsKeyPressed(.SPACE),
 		mouse_world_position = mouse_y * cellsView.charColumns + mouse_x,
-		mouse_tile_x         = mouse_x,
-		mouse_tile_y         = mouse_y,
+		mouse_charBlock_x    = mouse_x,
+		mouse_charBlock_y    = mouse_y,
 	}
 }
 
 draw_cursor :: proc(app: ^App, charBlock: CharacterBlock) {
 	rect := rl.Rectangle {
-		x      = f32(app.mouse_tile_x) * charBlock.width,
-		y      = f32(app.mouse_tile_y) * charBlock.height,
+		x      = f32(app.mouse_charBlock_x) * charBlock.width,
+		y      = f32(app.mouse_charBlock_y) * charBlock.height,
 		width  = charBlock.width,
 		height = charBlock.height,
 	}
@@ -383,7 +444,12 @@ draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
 	// 1. Get the FPS from Raylib and format it into a temporary Odin string
 	fps := rl.GetFPS()
 	//fps_text := fmt.tprintf("FPS: %d", fps) // tprintf allocates on the context temporary allocator
-	footer_text := fmt.tprintf("FPS: %d | X: %d, Y: %d", fps, app.mouse_tile_x, app.mouse_tile_y)
+	footer_text := fmt.tprintf(
+		"FPS: %d | X: %d, Y: %d",
+		fps,
+		app.mouse_charBlock_x,
+		app.mouse_charBlock_y,
+	)
 
 	// 2. Clear the old runes and copy the new string into your fixed rune array
 	//    (Resetting rune_index to track the actual length of your string)
