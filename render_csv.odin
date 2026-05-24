@@ -4,7 +4,6 @@ import "core:prof/spall"
 import rl "vendor:raylib"
 
 render_csv :: proc(cellsView: ^CellsView) {
-	spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
 	rl.ClearBackground(rl.DARKBLUE)
 
 

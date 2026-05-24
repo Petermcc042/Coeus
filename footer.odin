@@ -31,7 +31,6 @@ create_bottom_footer :: proc(footer: ^Footer) {
 
 
 draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
-	spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
 
 	rect := rl.Rectangle {
 		x      = 0,
