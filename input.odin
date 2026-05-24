@@ -17,7 +17,8 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 	mouse_y = clamp(mouse_y, 0, cellsView.charRows - 1)
 
 	if rl.IsKeyPressed(.ENTER) {
-		load_file_into_view(cellsView, csv_file_name)
+		cellsView.fileLoadingUnderway = true
+		cellsView.runeCountNeedsStarted = true
 	}
 
 	if rl.IsKeyPressed(.EQUAL) && rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyPressed(.KP_ADD) {
@@ -36,7 +37,7 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 		} else {
 			// Adjust how fast a single wheel tick scrolls.
 			// e.g., 'row_delta * 3' would scroll 3 rows per notch.
-			row_delta := i32(scroll * -1)
+			row_delta := i32(scroll * -1) * 3
 
 			cellsView.currentFileRow = math.max(cellsView.currentFileRow + row_delta, 0)
 		}

@@ -1,8 +1,13 @@
 package main
 
+import "core:prof/spall"
 import rl "vendor:raylib"
 
 render_csv :: proc(cellsView: ^CellsView) {
+	spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+	rl.ClearBackground(rl.DARKBLUE)
+
+
 	currentCol: i32 = 0 // keeps track of the exact character coord
 	currentRow: i32 = 0 // keeps track of the exact character coord
 	currentFieldIndex: i32 = 0 // keeps track of the exact character coord
@@ -20,11 +25,11 @@ render_csv :: proc(cellsView: ^CellsView) {
 	// be sure to render the header then skip to the row
 	fileCharIndex = cellsView.fileRows[cellsView.currentFileRow]
 
-	for fileCharIndex < i32(len(cellsView.fileChars)) {
+	for fileCharIndex < i32(len(cellsView.fileRunes)) {
 
 		if currentRow > cellsView.charRows {break}
 
-		char := cellsView.fileChars[fileCharIndex]
+		char := cellsView.fileRunes[fileCharIndex]
 		temp_char := char // re-assign the char so we can fill empty cell spots with ' '
 
 		// if we are in the first character of a new csv cell and it starts with a blank skip it
