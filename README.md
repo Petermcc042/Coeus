@@ -2,6 +2,10 @@
 This is a personal fun exploration into rendering csv's using Odin + Raylib.
 It is part of generally learning Odin + Raylib to build cross platform performant apps in the age of slop.
 
+## Technical implementation
+- Built in **Odin** on top of **Raylib**: resizable window + monospaced `JetBrainsMono` font, rendering text via `DrawTextCodepoint` in a real-time draw loop.
+- **Non-blocking CSV load** (triggered on Enter) uses `core:thread` in two phases: stream-count UTF-8 runes (to preallocate a fixed `[]rune`), then load+decode the file into that array while also building row start offsets for fast vertical scrolling.
+- **Viewport renderer** walks the rune buffer from the current row offset, does minimal CSV parsing (commas/newlines + quote toggling), clips cells using per-column widths, draws column dividers, and shows a footer with FPS + cursor cell coordinates.
 
 # Things to do
 
@@ -13,15 +17,8 @@ If it is less than the default min size of the field we could set the field widt
 ## Header Row Recognition
 Currently you just scroll past the header.
 
-## Loaded Meta Data For Sorting
-idea loop over the file once at the start to pull meta data.
-once the file is loaded on a background thread we can start running the extra meta data calculations.
-for each row look at the data and rank it based on a standard sorting algorithms. 
-If it is numerical work out the correct rank for each row and then store it alongside the row numbers array.
-
-## search
-
-## filter
+## search/filter
+No idea how to start this atm will get to it... maybe.
 
 ## Render Blocks of text 
 currently the code renders every single character as an individual draw call. 
