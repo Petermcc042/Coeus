@@ -1,10 +1,17 @@
+# Coeus
+This is a personal fun exploration into rendering csv's using Odin + Raylib.
+It is part of generally learning Odin + Raylib to build cross platform performant apps in the age of slop.
+
+
+# Things to do
+
 ## Sizing of columns
 this should be easy the only tough bit is learning how to work with on mouse down and mouse exit to determine drag distance.
 perhaps in loading a file we should also store the max character width of a column.
 If it is less than the default min size of the field we could set the field width to that instead.
 
 ## Header Row Recognition
-
+Currently you just scroll past the header.
 
 ## Loaded Meta Data For Sorting
 idea loop over the file once at the start to pull meta data.
