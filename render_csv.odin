@@ -22,7 +22,7 @@ render_csv :: proc(cellsView: ^CellsView) {
 	// get the char index we want to start at
 	// pass it instead of zero
 	// be sure to render the header then skip to the row
-	fileCharIndex = cellsView.fileRows[cellsView.currentFileRow]
+	fileCharIndex = cellsView.fileRowCharIndices[cellsView.currentFileRow]
 
 	for fileCharIndex < i32(len(cellsView.fileRunes)) {
 
@@ -33,6 +33,12 @@ render_csv :: proc(cellsView: ^CellsView) {
 
 		// if we are in the first character of a new csv cell and it starts with a blank skip it
 		if currentFieldCharIndex == 0 && char == ' ' {
+			fileCharIndex += 1 // we move past the new line char to start fresh
+			continue
+		}
+
+		// check for the other end line case where it is \r\n
+		if char == '\r' {
 			fileCharIndex += 1 // we move past the new line char to start fresh
 			continue
 		}
@@ -54,7 +60,7 @@ render_csv :: proc(cellsView: ^CellsView) {
 
 
 		// If it's a newline, move the "pen" to the next row and reset column
-		if char == '\n' || int(currentFieldIndex) >= len(cellsView.fieldWidths) {
+		if char == '\n' || int(currentFieldIndex) >= len(cellsView.fieldRenderWidths) {
 			inQuotes = false
 			currentCol = 0
 			currentRow += 1
@@ -67,7 +73,8 @@ render_csv :: proc(cellsView: ^CellsView) {
 		// look at the current column we are in
 		// get the width of it and if our current cell char index is greater than it we can move on
 		//fmt.printfln("Character %s:  %v", char, currentColumnIndex)
-		cell_is_filled: bool = (currentFieldCharIndex) >= cellsView.fieldWidths[currentFieldIndex]
+		cell_is_filled: bool =
+			(currentFieldCharIndex) >= cellsView.fieldRenderWidths[currentFieldIndex]
 
 		// if we are looping through one cell contents and it is already filled
 		// and we find a comma then it is time to move to the next cell
@@ -113,7 +120,7 @@ render_csv :: proc(cellsView: ^CellsView) {
 	}
 
 	cumulativeCharWidth: i32 = 0
-	for charWidth in cellsView.fieldWidths {
+	for charWidth in cellsView.fieldRenderWidths {
 		cumulativeCharWidth += charWidth
 		rl.DrawLine(
 			i32(cellsView.charBlock.width) * cumulativeCharWidth,

@@ -60,11 +60,11 @@ fileLoadWorker :: proc(t: ^thread.Thread) {
 	str_data := string(data)
 
 	temp_count: i32 = 0
-	append(&view.fileRows, 0)
+	append(&view.fileRowCharIndices, 0)
 
 	for r in str_data {
 		if r == '\n' {
-			append(&view.fileRows, temp_count + 1)
+			append(&view.fileRowCharIndices, temp_count + 1)
 		}
 
 		//append(&view.fileChars, r)
@@ -74,37 +74,4 @@ fileLoadWorker :: proc(t: ^thread.Thread) {
 
 	view.fileLoadSuccess = true
 	fmt.printfln("loadded filleeeee")
-}
-
-load_file_into_view :: proc(view: ^CellsView) {
-	// 1. Read the entire file into a byte slice ([]u8)
-	data, err := os.read_entire_file_from_path(view.fileCurrentPath, context.allocator)
-	if err != nil {
-		// You can print the specific error (e.g., 'File Not Found')
-		fmt.eprintfln("Error reading file %s: %v", view.fileCurrentPath, err)
-		return
-	}
-	defer delete(data, context.allocator)
-
-	// 2. Clear existing text
-	//clear(&view.fileChars)
-
-	// 3. Convert UTF-8 bytes to runes
-	// This handles multi-byte characters correctly for DrawTextCodepoint
-	str_data := string(data)
-
-	temp_count: i32 = 0
-	append(&view.fileRows, 0)
-
-	for r in str_data {
-		if r == '\n' {
-			append(&view.fileRows, temp_count + 1)
-		}
-
-		//append(&view.fileChars, r)
-		view.fileRunes[temp_count] = r
-		temp_count += 1
-	}
-	fmt.printfln("loadded filleeeee")
-	view.fileLoadingUnderway = false
 }

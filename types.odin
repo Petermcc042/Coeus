@@ -4,8 +4,8 @@ import "core:thread"
 import rl "vendor:raylib"
 
 // csv_file_name :: "data/testey.csv" //easy
-// csv_file_name :: "data/testier.csv"
-csv_file_name :: "data/customers-500000.csv"
+csv_file_name :: "data/testier.csv"
+// csv_file_name :: "data/customers-500000.csv"
 
 
 Window :: struct {
@@ -25,6 +25,10 @@ App :: struct {
 	mouse_world_position: i32,
 	mouse_charBlock_x:    i32, // the mouses character column position
 	mouse_charBlock_y:    i32, // the mouses character row position
+	mouse_fieldNum:       i32, // the mouses field column position
+	doubleClickThreshold: f32, // the mouses field column position
+	lastClickTime:        f32,
+	doubleClick:          bool,
 }
 
 // contains the info on width and height of a mono character
@@ -46,16 +50,13 @@ CellsView :: struct {
 	// layout of the cells
 	charColumns:                i32, // width of the viewer in columns
 	charRows:                   i32, // height of the viewer in rows
-	fieldHeights:               [dynamic]i32, // an array containing the height of each row of fields being displayed
-	fieldWidths:                [dynamic]i32, // an array containing the width of each column of fields being displayed
-
-	//loaded data
-	fileRows:                   [dynamic]i32, // an array containing the width of each column of cells being displayed
-	fileFields:                 [dynamic]i32, // an array containing the width of each column of cells being displayed
-	charsToRender:              [dynamic]rune, // an array containing the width of each column of cells being displayed
+	fileRowCharIndices:         [dynamic]i32, // the index positions in []fileRunes that are the start of rows
+	fieldRenderHeights:         []i32, // an array containing the height in characters of each row of fields being displayed
+	fieldRenderWidths:          []i32, // an array containing the width in characters of each column of fields being displayed
+	fileFieldsTypes:            []FieldType,
 
 	// to render
-	renderHeader:               bool,
+	containsHeader:             bool,
 	currentFileRow:             i32,
 
 	//this bool controls the whole file loading system
@@ -71,10 +72,10 @@ CellsView :: struct {
 	fileCurrentPath:            string,
 
 	// file loader thread
+	fileRunes:                  []rune, // the loaded file
 	runeArrayNeedsInitialised:  bool, // used to kick off rune array initialisation
 	fileLoadNeedsStarted:       bool, // used to begin the thread to load the current file
 	fileProcessingNeedsStarted: bool, // used to begin the column and row count proc
-	fileRunes:                  []rune, // the loaded file
 	fileLoadSuccess:            bool, // were there any errors in the file load thread
 	fileLoadThread:             ^thread.Thread,
 	fileLoadThreadActive:       bool,
@@ -90,4 +91,13 @@ Footer :: struct {
 	font:       rl.Font,
 	fontSize:   f32,
 	charBlock:  CharacterBlock,
+}
+
+
+FieldType :: enum {
+	String,
+	Numeric,
+	Int,
+	Float,
+	Date,
 }

@@ -2,20 +2,18 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:slice"
 import "core:thread"
 import rl "vendor:raylib"
 
 
 main :: proc() {
-
 	rl.SetConfigFlags({.WINDOW_RESIZABLE})
 	window := Window{"Adaptive Avoidance", 1280, 720, 120}
 	rl.InitWindow(window.width, window.height, window.name)
 	// rl.SetTargetFPS(120)
 
-
 	app: App
-
 
 	// setup the text view data
 	view := CellsView {
@@ -23,6 +21,7 @@ main :: proc() {
 		fileLoadingUnderway = false,
 		preprocessed        = false,
 		currentFileRow      = 0,
+		containsHeader      = true,
 	}
 
 	load_font(&view, 20)
@@ -58,6 +57,14 @@ update_loop :: proc(view: ^CellsView, charBlock: CharacterBlock, app: ^App, foot
 
 	fileLoadingLogic(view)
 
+	if app.doubleClick {
+		fmt.print("double click mf!...\n")
+	}
+
+	if rl.IsMouseButtonPressed(.LEFT) && app.mouse_charBlock_y == 0 {
+		sortColumn(view, app.mouse_fieldNum)
+	}
+
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
 
@@ -86,9 +93,7 @@ fileLoadingLogic :: proc(view: ^CellsView) {
 		view.runeCountNeedsStarted = false
 	}
 
-	{
-		pollRuneCountThread(view)
-	}
+	pollRuneCountThread(view)
 
 	// 2. create array
 	if view.runeArrayNeedsInitialised {
@@ -107,18 +112,17 @@ fileLoadingLogic :: proc(view: ^CellsView) {
 		view.fileLoadNeedsStarted = false
 	}
 
-	{
-		pollFileLoadThread(view)
-	}
+	pollFileLoadThread(view)
 
 	if view.fileProcessingNeedsStarted {
+		text := []rune{'1', '2', '.', '5'}
+		//cell_is_numeric(text)
 		process_csv(view)
 	}
 }
 
 
 load_font :: proc(cellsView: ^CellsView, fontSize: f32) {
-
 	cellsView.font = rl.LoadFontEx(
 		"JetBrainsMono-2.304/fonts/ttf/JetBrainsMono-Regular.ttf",
 		cast(i32)fontSize,
@@ -142,7 +146,7 @@ update_cell_width :: proc(cellsView: ^CellsView, app: ^App) {
 
 	if rl.IsMouseButtonDown(rl.MouseButton.LEFT) {
 		cumulativeCharWidth: i32 = 0
-		for charWidth in cellsView.fieldWidths {
+		for charWidth in cellsView.fieldRenderWidths {
 			cumulativeCharWidth += charWidth
 			linePos := i32(cellsView.charBlock.width) * cumulativeCharWidth
 			if f32(math.abs(rl.GetMouseX() - linePos)) < 5 {
@@ -173,17 +177,11 @@ process_csv :: proc(cellsView: ^CellsView) {
 		}
 	}
 
-	// Optimization watchpoint: append causes dynamic array reallocations!
-	// Pre-sizing these using reserve() before loops would mitigate spikes.
-	reserve(&cellsView.fieldWidths, len(cellsView.fieldWidths) + colCount + 1)
-	for i := 0; i <= colCount; i += 1 {
-		append(&cellsView.fieldWidths, 10)
-	}
+	cellsView.fieldRenderWidths = make([]i32, colCount + 1)
+	slice.fill(cellsView.fieldRenderWidths, 10)
 
-	reserve(&cellsView.fieldHeights, len(cellsView.fieldHeights) + rowCount + 1)
-	for i := 0; i <= rowCount; i += 1 {
-		append(&cellsView.fieldHeights, 1)
-	}
+	cellsView.fieldRenderHeights = make([]i32, rowCount)
+	slice.fill(cellsView.fieldRenderHeights, 1)
 
 	cellsView.preprocessed = true
 	cellsView.fileLoadingUnderway = false

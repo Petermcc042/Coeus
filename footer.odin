@@ -3,8 +3,6 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
-import "core:prof/spall"
-
 create_bottom_footer :: proc(footer: ^Footer) {
 
 	footer.font = rl.LoadFontEx(
