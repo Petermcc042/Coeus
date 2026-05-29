@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:sort"
 
 // A helper struct to match a row's starting position with its sorting key
@@ -12,76 +13,96 @@ sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 	if len(cellsView.fileRowCharIndices) == 0 do return
 
 	// 1. Allocate a temporary slice to hold our sorting entries
-	entries := make([]SortEntry, len(cellsView.fileRowCharIndices), context.temp_allocator)
-	// No need to manually free if using context.temp_allocator,
-	// otherwise use standard allocator and: defer delete(entries)
+	entries := make([]SortEntry, len(cellsView.fileRowCharIndices), context.allocator)
+	defer delete(entries)
 
 	// 2. Extract the sorting key for each row
 	for i := 0; i < len(cellsView.fileRowCharIndices); i += 1 {
-		row_start := cellsView.fileRowCharIndices[i]
+		rowStart := cellsView.fileRowCharIndices[i]
+		rowEnd: i32
 
-		// Determine where this row ends (either the start of the next row, or EOF)
-		row_end := i32(len(cellsView.fileRunes))
-		if i + 1 < len(cellsView.fileRowCharIndices) {
-			row_end = cellsView.fileRowCharIndices[i + 1]
+		if i + 1 >= len(cellsView.fileRowCharIndices) {
+			rowEnd = i32(len(cellsView.fileRunes))
+		} else {
+			rowEnd = cellsView.fileRowCharIndices[i + 1]
 		}
 
-		// Clean up trailing newlines so they don't corrupt our last field
-		for row_end > row_start {
-			c := cellsView.fileRunes[row_end - 1]
-			if c == '\n' || c == '\r' do row_end -= 1
-			else do break
-		}
+		//fmt.print(cellsView.fileRunes[rowStart:rowEnd], "\n")
+		// fmt.print("Sorting for column: ", fieldNum, "\n")
+		currentField: i32 = 0
+		startIndex := 0
+		endIndex := 0
+		inQuotes := false
+		indexCount := 0
 
-		row_runes := cellsView.fileRunes[row_start:row_end]
+		for rune in cellsView.fileRunes[rowStart:rowEnd] {
+			if rune == '\r' {
+				continue
+			}
 
-		// Find the requested column (fieldNum) by splitting on commas
-		field_start := 0
-		current_field: i32 = 0
-		key_slice: []rune = {}
 
-		for idx := 0; idx <= len(row_runes); idx += 1 {
-			// Check if we hit a delimiter or the end of the row
-			if idx == len(row_runes) || row_runes[idx] == ',' {
-				if current_field == fieldNum {
-					key_slice = row_runes[field_start:idx]
+			if rune == '"' {
+				if inQuotes {
+					inQuotes = false
+				} else {
+					inQuotes = true
+				}
+			}
+
+
+			if (rune == ',' && inQuotes == false) || rune == '\n' {
+				if currentField == fieldNum {
+					endIndex = indexCount
+					//fmt.print(cellsView.fileRunes[rowStart:rowEnd][startIndex:endIndex], "\n")
 					break
 				}
-				current_field += 1
-				field_start = idx + 1
+				currentField += 1
+				startIndex = indexCount + 1
 			}
+
+			indexCount += 1
+
 		}
 
 		// Store the index alongside its key
 		entries[i] = SortEntry {
-			row_index = row_start,
-			key       = key_slice,
+			row_index = rowStart,
+			key       = cellsView.fileRunes[rowStart:rowEnd][startIndex:endIndex],
 		}
 	}
 
 	// 3. Sort the entries based on their rune slices alphabetically
 	// 3. Sort the entries using a 3-way integer comparison
-	sort.quick_sort_proc(
-		entries,
-		proc(a, b: SortEntry) -> int {
-			min_len := len(a.key) if len(a.key) < len(b.key) else len(b.key)
+	sort.quick_sort_proc(entries, sortCell)
 
-			// Compare rune by rune
-			for i := 0; i < min_len; i += 1 {
-				if a.key[i] < b.key[i] do return -1
-				if a.key[i] > b.key[i] do return 1
-			}
+	// Verify the result
+	// for entry in entries {
+	// 	fmt.printf("Row: %d, Key: %s\n", entry.row_index, entry.key)
+	// }
 
-			// If they match up to min_len, the shorter one comes first
-			if len(a.key) < len(b.key) do return -1
-			if len(a.key) > len(b.key) do return 1
-
-			return 0 // Completely identical
-		},
-	)
-
-	// 4. Repopulate your original index array with the newly sorted layout
+	// // 4. Repopulate your original index array with the newly sorted layout
 	for i := 0; i < len(entries); i += 1 {
 		cellsView.fileRowCharIndices[i] = entries[i].row_index
 	}
+
+	// for rowIndex in cellsView.fileRowCharIndices {
+	// 	fmt.print(rowIndex, "\n")
+	// }
+}
+
+
+sortCell :: proc(a, b: SortEntry) -> int {
+	min_len := len(a.key) if len(a.key) < len(b.key) else len(b.key)
+
+	// Compare rune by rune
+	for i := 0; i < min_len; i += 1 {
+		if a.key[i] < b.key[i] do return -1
+		if a.key[i] > b.key[i] do return 1
+	}
+
+	// If they match up to min_len, the shorter one comes first
+	if len(a.key) < len(b.key) do return -1
+	if len(a.key) > len(b.key) do return 1
+
+	return 0 // Completely identical
 }

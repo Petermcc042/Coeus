@@ -3,7 +3,6 @@ package main
 import "core:fmt"
 import "core:math"
 import "core:slice"
-import "core:thread"
 import rl "vendor:raylib"
 
 
@@ -13,33 +12,21 @@ main :: proc() {
 	rl.InitWindow(window.width, window.height, window.name)
 	// rl.SetTargetFPS(120)
 
-	app: App
+	app: App = {}
 
 	// setup the text view data
-	view := CellsView {
-		colors              = []rl.Color{rl.BLUE, rl.SKYBLUE},
-		fileLoadingUnderway = false,
-		preprocessed        = false,
-		currentFileRow      = 0,
-		containsHeader      = true,
-	}
+	view := CellsView{}
 
-	load_font(&view, 20)
+	initApp(&view, &app, 20)
 	defer delete(view.fileRunes)
+	defer delete(view.runesToRender)
 
 	footer: Footer
 	create_bottom_footer(&footer)
 
-	// tracking for counting rune thread
-	view.runeCountNeedsStarted = false
-	view.runeCountThread = nil
-	view.fileNumRunes = 0
-	view.fileCurrentPath = csv_file_name
-	view.runeCountThreadActive = false
-	view.runeCountThreadComplete = false
 
 	for !rl.WindowShouldClose() {
-		update_loop(&view, view.charBlock, &app, &footer)
+		update_loop(&view, &app, &footer)
 	}
 
 	rl.UnloadFont(view.font)
@@ -47,7 +34,7 @@ main :: proc() {
 }
 
 
-update_loop :: proc(view: ^CellsView, charBlock: CharacterBlock, app: ^App, footer: ^Footer) {
+update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer) {
 
 	// 3. Check for Resize
 	if rl.IsWindowResized() {
@@ -69,7 +56,7 @@ update_loop :: proc(view: ^CellsView, charBlock: CharacterBlock, app: ^App, foot
 	rl.ClearBackground(rl.BLACK)
 
 	// render backgrounds
-	draw_cursor(app, charBlock)
+	draw_cursor(app, view)
 	draw_bottom_footer(footer, app)
 
 	if view.preprocessed {
@@ -122,38 +109,18 @@ fileLoadingLogic :: proc(view: ^CellsView) {
 }
 
 
-load_font :: proc(cellsView: ^CellsView, fontSize: f32) {
-	cellsView.font = rl.LoadFontEx(
-		"JetBrainsMono-2.304/fonts/ttf/JetBrainsMono-Regular.ttf",
-		cast(i32)fontSize,
-		nil,
-		0,
-	)
-	cellsView.fontSize = fontSize
-
-	charSpacing := f32(6)
-	charSize := rl.MeasureTextEx(cellsView.font, "A", cellsView.fontSize, charSpacing)
-
-	cellsView.charBlock = CharacterBlock {
-		width  = charSize.x,
-		height = charSize.y,
-	}
-
-	update_app_dimensions(cellsView)
-}
-
 update_cell_width :: proc(cellsView: ^CellsView, app: ^App) {
 
 	if rl.IsMouseButtonDown(rl.MouseButton.LEFT) {
 		cumulativeCharWidth: i32 = 0
 		for charWidth in cellsView.fieldRenderWidths {
 			cumulativeCharWidth += charWidth
-			linePos := i32(cellsView.charBlock.width) * cumulativeCharWidth
+			linePos := i32(cellsView.charWidth) * cumulativeCharWidth
 			if f32(math.abs(rl.GetMouseX() - linePos)) < 5 {
 				rl.DrawLine(
-					i32(cellsView.charBlock.width) * cumulativeCharWidth,
+					i32(cellsView.charWidth) * cumulativeCharWidth,
 					0,
-					i32(cellsView.charBlock.width) * cumulativeCharWidth,
+					i32(cellsView.charWidth) * cumulativeCharWidth,
 					rl.GetScreenHeight(),
 					rl.RED,
 				)
@@ -191,10 +158,10 @@ process_csv :: proc(cellsView: ^CellsView) {
 update_text_size :: proc(increase: bool, cellsView: ^CellsView) {
 	if (increase) {
 		new_size: f32 = cellsView.fontSize + 10
-		load_font(cellsView, new_size)
+		loadFont(cellsView, new_size)
 	} else {
 		new_size: f32 = cellsView.fontSize - 10
-		load_font(cellsView, new_size)
+		loadFont(cellsView, new_size)
 	}
 }
 
@@ -202,16 +169,19 @@ update_app_dimensions :: proc(cellsView: ^CellsView) {
 	new_win_w := f32(rl.GetScreenWidth())
 	new_win_h := f32(rl.GetScreenHeight()) - 20
 
-	cellsView.charColumns = i32(new_win_w / cellsView.charBlock.width)
-	cellsView.charRows = i32(new_win_h / cellsView.charBlock.height)
+	cellsView.charColumns = i32(new_win_w / cellsView.charWidth)
+	cellsView.charRows = i32(new_win_h / cellsView.charHeight)
+
+	delete(cellsView.runesToRender)
+	cellsView.runesToRender = make([]rune, cellsView.charColumns * cellsView.charRows)
 }
 
-draw_cursor :: proc(app: ^App, charBlock: CharacterBlock) {
+draw_cursor :: proc(app: ^App, view: ^CellsView) {
 	rect := rl.Rectangle {
-		x      = f32(app.mouse_charBlock_x) * charBlock.width,
-		y      = f32(app.mouse_charBlock_y) * charBlock.height,
-		width  = charBlock.width,
-		height = charBlock.height,
+		x      = f32(app.mouse_charBlock_x) * view.charWidth,
+		y      = f32(app.mouse_charBlock_y) * view.charHeight,
+		width  = view.charWidth,
+		height = view.charHeight,
 	}
 
 	rl.DrawRectangleRec(rect, rl.Fade(rl.YELLOW, 0.4))

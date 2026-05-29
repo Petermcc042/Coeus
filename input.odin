@@ -14,8 +14,8 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 	m_pos := rl.GetMousePosition()
 
 	// Calculate tile based on pixel / cell size directly
-	mouse_x := i32(m_pos.x / cellsView.charBlock.width)
-	mouse_y := i32(m_pos.y / cellsView.charBlock.height)
+	mouse_x := i32(m_pos.x / cellsView.charWidth)
+	mouse_y := i32(m_pos.y / cellsView.charHeight)
 
 	m_worl_pos := mouse_y * cellsView.charColumns + mouse_x
 

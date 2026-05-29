@@ -4,8 +4,8 @@ import "core:thread"
 import rl "vendor:raylib"
 
 // csv_file_name :: "data/testey.csv" //easy
-csv_file_name :: "data/testier.csv"
-// csv_file_name :: "data/customers-500000.csv"
+// csv_file_name :: "data/testier.csv"
+csv_file_name :: "data/customers-500000.csv"
 
 
 Window :: struct {
@@ -45,7 +45,8 @@ CellsView :: struct {
 	colors:                     []rl.Color,
 	font:                       rl.Font,
 	fontSize:                   f32,
-	charBlock:                  CharacterBlock, // text character information
+	charWidth:                  f32,
+	charHeight:                 f32,
 
 	// layout of the cells
 	charColumns:                i32, // width of the viewer in columns
@@ -58,6 +59,7 @@ CellsView :: struct {
 	// to render
 	containsHeader:             bool,
 	currentFileRow:             i32,
+	runesToRender:              []rune,
 
 	//this bool controls the whole file loading system
 	fileLoadingUnderway:        bool,
