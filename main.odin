@@ -8,10 +8,11 @@ import rl "vendor:raylib"
 debugCountdown: f32 = 1
 
 main :: proc() {
-	rl.SetConfigFlags({.WINDOW_RESIZABLE})
+	//SetConfigFlags(FLAG_WINDOW_HIGHDPI);
+	rl.SetConfigFlags({.WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
 	window := Window{"Adaptive Avoidance", 1280, 720, 120}
 	rl.InitWindow(window.width, window.height, window.name)
-	// rl.SetTargetFPS(120)
+	rl.SetTargetFPS(120)
 
 	app: App = {}
 	footer: Footer = {}
@@ -88,7 +89,7 @@ update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer, header: ^Heade
 	if view.preprocessed {
 		// render_csv profile scope is maintained inside its own proc,
 		// or will nest cleanly here if it contains one
-		render_csv(view)
+		renderCellsView(view)
 	}
 
 	update_cell_width(view, app)

@@ -41,7 +41,7 @@ loadCellViewFont :: proc(view: ^CellsView, fontSize: f32) {
 }
 
 
-render_csv :: proc(cellsView: ^CellsView) {
+renderCellsView :: proc(cellsView: ^CellsView) {
 	//rl.ClearBackground(rl.DARKBLUE)
 	rect := rl.Rectangle {
 		x      = 0,
@@ -151,8 +151,8 @@ render_csv :: proc(cellsView: ^CellsView) {
 			}
 
 			pos := rl.Vector2 {
-				f32(currentCol) * cellsView.charWidth,
-				f32(currentRow) * cellsView.charHeight,
+				f32(currentCol) * cellsView.charWidth + cellsView.topLeft.x,
+				f32(currentRow) * cellsView.charHeight + cellsView.topLeft.y,
 			}
 
 			if temp_char != 0 {
@@ -172,19 +172,19 @@ render_csv :: proc(cellsView: ^CellsView) {
 	for charWidth in cellsView.fieldRenderWidths {
 		cumulativeCharWidth += charWidth
 		rl.DrawLine(
-			i32(cellsView.charWidth) * cumulativeCharWidth,
-			0,
-			i32(cellsView.charWidth) * cumulativeCharWidth,
-			rl.GetScreenHeight(),
+			i32(cellsView.charWidth) * cumulativeCharWidth + i32(cellsView.topLeft.x),
+			i32(cellsView.topLeft.y),
+			i32(cellsView.charWidth) * cumulativeCharWidth + i32(cellsView.topLeft.x),
+			i32(cellsView.bottomRight.y),
 			rl.WHITE,
 		)
 	}
 
 	rl.DrawLine(
-		0,
-		i32(cellsView.charHeight),
-		rl.GetScreenWidth(),
-		i32(cellsView.charHeight),
+		0 + i32(cellsView.topLeft.x),
+		i32(cellsView.charHeight) + i32(cellsView.topLeft.y),
+		i32(cellsView.bottomRight.x),
+		i32(cellsView.charHeight) + i32(cellsView.topLeft.y),
 		rl.WHITE,
 	)
 }

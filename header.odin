@@ -33,20 +33,12 @@ drawHeader :: proc(header: ^Header, app: ^App) {
 	rl.DrawRectangleRec(rect, rl.Fade(rl.YELLOW, 0.2))
 
 
-	// 1. Get the FPS from Raylib and format it into a temporary Odin string
-	fps := rl.GetFPS()
-	//fps_text := fmt.tprintf("FPS: %d", fps) // tprintf allocates on the context temporary allocator
-	footer_text := fmt.tprintf(
-		"FPS: %d | X: %d, Y: %d",
-		fps,
-		app.mouse_charBlock_x,
-		app.mouse_charBlock_y,
-	)
+	header_text := fmt.tprintf("Coeus")
 
 	// 2. Clear the old runes and copy the new string into your fixed rune array
 	//    (Resetting rune_index to track the actual length of your string)
 	header.rune_index = 0
-	for r in footer_text {
+	for r in header_text {
 		if header.rune_index >= 1000 do break // Prevent buffer overflow
 
 		header.chars[header.rune_index] = r
