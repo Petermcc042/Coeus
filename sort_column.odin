@@ -13,21 +13,24 @@ sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 	if len(cellsView.fileRowCharIndices) == 0 do return
 
 	// 1. Allocate a temporary slice to hold our sorting entries
-	entries := make([]SortEntry, len(cellsView.fileRowCharIndices), context.allocator)
+	// len() - 1 because the last entry is the last '\n' in the file
+	entries := make([]SortEntry, len(cellsView.fileRowCharIndices) - 1, context.allocator)
 	defer delete(entries)
+
 
 	// 2. Extract the sorting key for each row
 	for i := 0; i < len(cellsView.fileRowCharIndices); i += 1 {
 		rowStart := cellsView.fileRowCharIndices[i]
 		rowEnd: i32
+		fmt.print("index: ", i, "len: ", len(cellsView.fileRowCharIndices), "\n")
 
 		if i + 1 >= len(cellsView.fileRowCharIndices) {
-			rowEnd = i32(len(cellsView.fileRunes))
+			continue
 		} else {
 			rowEnd = cellsView.fileRowCharIndices[i + 1]
 		}
 
-		//fmt.print(cellsView.fileRunes[rowStart:rowEnd], "\n")
+		// fmt.print(cellsView.fileRunes[rowStart:rowEnd], "\n")
 		// fmt.print("Sorting for column: ", fieldNum, "\n")
 		currentField: i32 = 0
 		startIndex := 0

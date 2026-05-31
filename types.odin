@@ -3,9 +3,9 @@ package main
 import "core:thread"
 import rl "vendor:raylib"
 
-// csv_file_name :: "data/testey.csv" //easy
+csv_file_name :: "data/testey.csv" //easy
 // csv_file_name :: "data/testier.csv"
-csv_file_name :: "data/customers-500000.csv"
+// csv_file_name :: "data/customers-500000.csv"
 
 
 Window :: struct {
@@ -51,7 +51,7 @@ CellsView :: struct {
 	// layout of the cells
 	charColumns:                i32, // width of the viewer in columns
 	charRows:                   i32, // height of the viewer in rows
-	fileRowCharIndices:         [dynamic]i32, // the index positions in []fileRunes that are the start of rows
+	fileRowCharIndices:         [dynamic]RowInfo, // the index positions in []fileRunes that are the start of rows
 	fieldRenderHeights:         []i32, // an array containing the height in characters of each row of fields being displayed
 	fieldRenderWidths:          []i32, // an array containing the width in characters of each column of fields being displayed
 	fileFieldsTypes:            []FieldType,
@@ -102,4 +102,9 @@ FieldType :: enum {
 	Int,
 	Float,
 	Date,
+}
+
+RowInfo :: struct {
+	rowStartIndex: i32,
+	rowEndIndex:   i32,
 }

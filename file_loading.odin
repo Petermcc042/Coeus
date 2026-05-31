@@ -60,11 +60,12 @@ fileLoadWorker :: proc(t: ^thread.Thread) {
 	str_data := string(data)
 
 	temp_count: i32 = 0
-	append(&view.fileRowCharIndices, 0)
+	rowStartIndex: i32 = 0
 
 	for r in str_data {
 		if r == '\n' {
-			append(&view.fileRowCharIndices, temp_count + 1)
+			append(&view.fileRowCharIndices, RowInfo{rowStartIndex, temp_count})
+			rowStartIndex = temp_count + 1
 		}
 
 		//append(&view.fileChars, r)
