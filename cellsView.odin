@@ -42,7 +42,15 @@ loadCellViewFont :: proc(view: ^CellsView, fontSize: f32) {
 
 
 render_csv :: proc(cellsView: ^CellsView) {
-	rl.ClearBackground(rl.DARKBLUE)
+	//rl.ClearBackground(rl.DARKBLUE)
+	rect := rl.Rectangle {
+		x      = 0,
+		y      = cellsView.topLeft.y,
+		width  = cellsView.bottomRight.x - cellsView.topLeft.x,
+		height = cellsView.bottomRight.y - cellsView.topLeft.y,
+	}
+
+	rl.DrawRectangleRec(rect, rl.Fade(rl.BLUE, 0.2))
 
 
 	currentCol: i32 = 0 // keeps track of the exact character coord
@@ -153,9 +161,9 @@ render_csv :: proc(cellsView: ^CellsView) {
 
 			currentCol += 1
 			currentRow += 0
-			currentFieldIndex += 0 // in a same word no need to change
-			currentFieldCharIndex += 1 // move to the next cell (char count resets)
-			fileCharIndex += 1 // try the next character
+			currentFieldIndex += 0
+			currentFieldCharIndex += 1
+			fileCharIndex += 1
 		}
 	}
 

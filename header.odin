@@ -24,10 +24,10 @@ initHeader :: proc(header: ^Header) {
 drawHeader :: proc(header: ^Header, app: ^App) {
 
 	rect := rl.Rectangle {
-		x      = 0,
-		y      = f32(rl.GetScreenHeight()) - header.charHeight,
-		width  = f32(rl.GetScreenWidth()),
-		height = header.charHeight,
+		x      = header.topLeft.x,
+		y      = header.topLeft.y,
+		width  = header.bottomRight.x - header.topLeft.x,
+		height = header.bottomRight.y - header.topLeft.y,
 	}
 
 	rl.DrawRectangleRec(rect, rl.Fade(rl.YELLOW, 0.2))
@@ -51,10 +51,7 @@ drawHeader :: proc(header: ^Header, app: ^App) {
 
 		header.chars[header.rune_index] = r
 
-		pos := rl.Vector2 {
-			f32(header.rune_index) * header.charWidth,
-			f32(rl.GetScreenHeight()) - header.charHeight,
-		}
+		pos := rl.Vector2{f32(header.rune_index) * header.charWidth, 0}
 
 		rl.DrawTextCodepoint(header.font, r, pos, header.fontSize, rl.WHITE)
 

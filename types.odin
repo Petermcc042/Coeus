@@ -47,6 +47,9 @@ CellsView :: struct {
 	fontSize:                   f32,
 	charWidth:                  f32,
 	charHeight:                 f32,
+	topLeft:                    [2]f32,
+	bottomRight:                [2]f32,
+
 
 	// layout of the cells
 	charColumns:                i32, // width of the viewer in columns
@@ -87,23 +90,27 @@ CellsView :: struct {
 
 
 Footer :: struct {
-	columns:    i32, // width in columns
-	chars:      [1000]rune,
-	rune_index: i32,
-	font:       rl.Font,
-	fontSize:   f32,
-	charWidth:  f32,
-	charHeight: f32,
+	topLeft:     [2]f32,
+	bottomRight: [2]f32,
+	columns:     i32, // width in columns
+	chars:       [1000]rune,
+	rune_index:  i32,
+	font:        rl.Font,
+	fontSize:    f32,
+	charWidth:   f32,
+	charHeight:  f32,
 }
 
 Header :: struct {
-	columns:    i32,
-	chars:      [1000]rune,
-	rune_index: i32,
-	font:       rl.Font,
-	fontSize:   f32,
-	charWidth:  f32,
-	charHeight: f32,
+	topLeft:     [2]f32,
+	bottomRight: [2]f32,
+	columns:     i32,
+	chars:       [1000]rune,
+	rune_index:  i32,
+	font:        rl.Font,
+	fontSize:    f32,
+	charWidth:   f32,
+	charHeight:  f32,
 }
 
 

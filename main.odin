@@ -19,40 +19,51 @@ main :: proc() {
 	view: CellsView = {}
 
 	initFooter(&footer)
-	//initHeader
+	initHeader(&header)
 
 	initCellsView(&view, 20)
 	defer delete(view.fileRunes)
 	defer delete(view.runesToRender)
 
-	updateAppLayout(&footer, &view)
+	updateAppLayout(&footer, &header, &view)
 
 	for !rl.WindowShouldClose() {
-		update_loop(&view, &app, &footer)
+		update_loop(&view, &app, &footer, &header)
 	}
 
 	rl.UnloadFont(view.font)
 	rl.CloseWindow()
 }
 
-updateAppLayout :: proc(footer: ^Footer, view: ^CellsView) {
-	cellViewWinWidth := f32(rl.GetScreenWidth())
-	cellViewWinHeight := f32(rl.GetScreenHeight()) - footer.charHeight
+updateAppLayout :: proc(footer: ^Footer, header: ^Header, view: ^CellsView) {
+	footer.topLeft = {0, f32(rl.GetScreenHeight()) - footer.charHeight}
+	footer.bottomRight = {f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
 
-	view.charColumns = i32(cellViewWinWidth / view.charWidth)
-	view.charRows = i32(cellViewWinHeight / view.charHeight)
+	header.topLeft = {0, 0}
+	header.bottomRight = {f32(rl.GetScreenWidth()), header.charHeight}
+
+	view.topLeft = {0, header.charHeight}
+	view.bottomRight = {f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) - footer.charHeight}
+
+	viewWidth := view.bottomRight.x - view.topLeft.x
+	viewHeight := f32(rl.GetScreenHeight()) - footer.charHeight
+
+	fmt.print("viewWidth: ", viewWidth, " viewHeigh: ", viewHeight)
+
+	view.charColumns = i32(viewWidth / view.charWidth)
+	view.charRows = i32(viewHeight / view.charHeight)
 
 	delete(view.runesToRender)
 	view.runesToRender = make([]rune, view.charColumns * view.charRows)
 }
 
 
-update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer) {
+update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer, header: ^Header) {
 
 	// 3. Check for Resize
 	if rl.IsWindowResized() {
 		fmt.print("app layout resized \n")
-		updateAppLayout(footer, view)
+		updateAppLayout(footer, header, view)
 	}
 	process_user_input(app, view)
 
@@ -72,6 +83,7 @@ update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer) {
 	// render backgrounds
 	draw_cursor(app, view)
 	draw_bottom_footer(footer, app)
+	drawHeader(header, app)
 
 	if view.preprocessed {
 		// render_csv profile scope is maintained inside its own proc,
