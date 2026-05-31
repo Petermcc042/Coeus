@@ -5,6 +5,7 @@ import "core:math"
 import "core:slice"
 import rl "vendor:raylib"
 
+debugCountdown: f32 = 1
 
 main :: proc() {
 	rl.SetConfigFlags({.WINDOW_RESIZABLE})
@@ -13,17 +14,18 @@ main :: proc() {
 	// rl.SetTargetFPS(120)
 
 	app: App = {}
+	footer: Footer = {}
+	header: Header = {}
+	view: CellsView = {}
 
-	// setup the text view data
-	view := CellsView{}
+	initFooter(&footer)
+	//initHeader
 
-	initApp(&view, &app, 20)
+	initCellsView(&view, 20)
 	defer delete(view.fileRunes)
 	defer delete(view.runesToRender)
 
-	footer: Footer
-	create_bottom_footer(&footer)
-
+	updateAppLayout(&footer, &view)
 
 	for !rl.WindowShouldClose() {
 		update_loop(&view, &app, &footer)
@@ -33,12 +35,24 @@ main :: proc() {
 	rl.CloseWindow()
 }
 
+updateAppLayout :: proc(footer: ^Footer, view: ^CellsView) {
+	cellViewWinWidth := f32(rl.GetScreenWidth())
+	cellViewWinHeight := f32(rl.GetScreenHeight()) - footer.charHeight
+
+	view.charColumns = i32(cellViewWinWidth / view.charWidth)
+	view.charRows = i32(cellViewWinHeight / view.charHeight)
+
+	delete(view.runesToRender)
+	view.runesToRender = make([]rune, view.charColumns * view.charRows)
+}
+
 
 update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer) {
 
 	// 3. Check for Resize
 	if rl.IsWindowResized() {
-		update_app_dimensions(view)
+		fmt.print("app layout resized \n")
+		updateAppLayout(footer, view)
 	}
 	process_user_input(app, view)
 
@@ -158,22 +172,11 @@ process_csv :: proc(cellsView: ^CellsView) {
 update_text_size :: proc(increase: bool, cellsView: ^CellsView) {
 	if (increase) {
 		new_size: f32 = cellsView.fontSize + 10
-		loadFont(cellsView, new_size)
+		loadCellViewFont(cellsView, new_size)
 	} else {
 		new_size: f32 = cellsView.fontSize - 10
-		loadFont(cellsView, new_size)
+		loadCellViewFont(cellsView, new_size)
 	}
-}
-
-update_app_dimensions :: proc(cellsView: ^CellsView) {
-	new_win_w := f32(rl.GetScreenWidth())
-	new_win_h := f32(rl.GetScreenHeight()) - 20
-
-	cellsView.charColumns = i32(new_win_w / cellsView.charWidth)
-	cellsView.charRows = i32(new_win_h / cellsView.charHeight)
-
-	delete(cellsView.runesToRender)
-	cellsView.runesToRender = make([]rune, cellsView.charColumns * cellsView.charRows)
 }
 
 draw_cursor :: proc(app: ^App, view: ^CellsView) {

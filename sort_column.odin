@@ -5,32 +5,25 @@ import "core:sort"
 
 // A helper struct to match a row's starting position with its sorting key
 SortEntry :: struct {
-	row_index: i32,
-	key:       []rune, // Points directly inside cellsView.fileRunes (zero-allocation)
+	rowStartIndex: i32,
+	rowEndIndex:   i32,
+	key:           []rune, // Points directly inside cellsView.fileRunes (zero-allocation)
 }
 
 sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 	if len(cellsView.fileRowCharIndices) == 0 do return
 
-	// 1. Allocate a temporary slice to hold our sorting entries
-	// len() - 1 because the last entry is the last '\n' in the file
-	entries := make([]SortEntry, len(cellsView.fileRowCharIndices) - 1, context.allocator)
+	entries := make([]SortEntry, len(cellsView.fileRowCharIndices), context.allocator)
 	defer delete(entries)
 
 
 	// 2. Extract the sorting key for each row
 	for i := 0; i < len(cellsView.fileRowCharIndices); i += 1 {
-		rowStart := cellsView.fileRowCharIndices[i]
-		rowEnd: i32
-		fmt.print("index: ", i, "len: ", len(cellsView.fileRowCharIndices), "\n")
+		rowStart := cellsView.fileRowCharIndices[i].rowStartIndex
+		rowEnd := cellsView.fileRowCharIndices[i].rowEndIndex
+		// fmt.print("index: ", i, "len: ", len(cellsView.fileRowCharIndices), "\n")
 
-		if i + 1 >= len(cellsView.fileRowCharIndices) {
-			continue
-		} else {
-			rowEnd = cellsView.fileRowCharIndices[i + 1]
-		}
-
-		// fmt.print(cellsView.fileRunes[rowStart:rowEnd], "\n")
+		//fmt.print(cellsView.fileRunes[rowStart:rowEnd], "\n")
 		// fmt.print("Sorting for column: ", fieldNum, "\n")
 		currentField: i32 = 0
 		startIndex := 0
@@ -69,8 +62,9 @@ sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 
 		// Store the index alongside its key
 		entries[i] = SortEntry {
-			row_index = rowStart,
-			key       = cellsView.fileRunes[rowStart:rowEnd][startIndex:endIndex],
+			rowStartIndex = rowStart,
+			rowEndIndex   = rowEnd,
+			key           = cellsView.fileRunes[rowStart:rowEnd][startIndex:endIndex],
 		}
 	}
 
@@ -79,18 +73,19 @@ sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 	sort.quick_sort_proc(entries, sortCell)
 
 	// Verify the result
-	// for entry in entries {
-	// 	fmt.printf("Row: %d, Key: %s\n", entry.row_index, entry.key)
-	// }
+	for entry in entries {
+		fmt.printf("Row: %d, Key: %s\n", entry.rowStartIndex, entry.key)
+	}
 
 	// // 4. Repopulate your original index array with the newly sorted layout
 	for i := 0; i < len(entries); i += 1 {
-		cellsView.fileRowCharIndices[i] = entries[i].row_index
+		cellsView.fileRowCharIndices[i].rowStartIndex = entries[i].rowStartIndex
+		cellsView.fileRowCharIndices[i].rowEndIndex = entries[i].rowEndIndex
 	}
 
-	// for rowIndex in cellsView.fileRowCharIndices {
-	// 	fmt.print(rowIndex, "\n")
-	// }
+	for rowIndex in cellsView.fileRowCharIndices {
+		fmt.print(rowIndex, "\n")
+	}
 }
 
 

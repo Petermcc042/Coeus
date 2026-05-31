@@ -92,7 +92,18 @@ Footer :: struct {
 	rune_index: i32,
 	font:       rl.Font,
 	fontSize:   f32,
-	charBlock:  CharacterBlock,
+	charWidth:  f32,
+	charHeight: f32,
+}
+
+Header :: struct {
+	columns:    i32,
+	chars:      [1000]rune,
+	rune_index: i32,
+	font:       rl.Font,
+	fontSize:   f32,
+	charWidth:  f32,
+	charHeight: f32,
 }
 
 

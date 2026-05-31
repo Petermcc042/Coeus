@@ -3,31 +3,31 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
-initFooter :: proc(footer: ^Footer) {
-	footer.font = rl.LoadFontEx(
+initHeader :: proc(header: ^Header) {
+	header.font = rl.LoadFontEx(
 		"JetBrainsMono-2.304/fonts/ttf/JetBrainsMono-Regular.ttf",
 		15,
 		nil,
 		0,
 	)
 
-	footer.rune_index = 0
-	footer.fontSize = 15
+	header.rune_index = 0
+	header.fontSize = 15
 	charSpacing := f32(2)
-	charSize := rl.MeasureTextEx(footer.font, "A", footer.fontSize, charSpacing)
-	footer.charWidth = charSize.x
-	footer.charHeight = charSize.y
+	charSize := rl.MeasureTextEx(header.font, "A", header.fontSize, charSpacing)
+	header.charWidth = charSize.x
+	header.charHeight = charSize.y
 
-	fmt.print("loaded footer \n")
+	fmt.print("loaded header \n")
 }
 
-draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
+drawHeader :: proc(header: ^Header, app: ^App) {
 
 	rect := rl.Rectangle {
 		x      = 0,
-		y      = f32(rl.GetScreenHeight()) - footer.charHeight,
+		y      = f32(rl.GetScreenHeight()) - header.charHeight,
 		width  = f32(rl.GetScreenWidth()),
-		height = footer.charHeight,
+		height = header.charHeight,
 	}
 
 	rl.DrawRectangleRec(rect, rl.Fade(rl.YELLOW, 0.2))
@@ -45,19 +45,19 @@ draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
 
 	// 2. Clear the old runes and copy the new string into your fixed rune array
 	//    (Resetting rune_index to track the actual length of your string)
-	footer.rune_index = 0
+	header.rune_index = 0
 	for r in footer_text {
-		if footer.rune_index >= 1000 do break // Prevent buffer overflow
+		if header.rune_index >= 1000 do break // Prevent buffer overflow
 
-		footer.chars[footer.rune_index] = r
+		header.chars[header.rune_index] = r
 
 		pos := rl.Vector2 {
-			f32(footer.rune_index) * footer.charWidth,
-			f32(rl.GetScreenHeight()) - footer.charHeight,
+			f32(header.rune_index) * header.charWidth,
+			f32(rl.GetScreenHeight()) - header.charHeight,
 		}
 
-		rl.DrawTextCodepoint(footer.font, r, pos, footer.fontSize, rl.WHITE)
+		rl.DrawTextCodepoint(header.font, r, pos, header.fontSize, rl.WHITE)
 
-		footer.rune_index += 1
+		header.rune_index += 1
 	}
 }

@@ -1,8 +1,45 @@
 package main
 
 import "core:fmt"
-import "core:prof/spall"
 import rl "vendor:raylib"
+
+initCellsView :: proc(view: ^CellsView, fontSize: f32) {
+	// tracking for counting rune thread
+	view.runeCountNeedsStarted = false
+	view.runeCountThread = nil
+	view.fileNumRunes = 0
+	view.fileCurrentPath = csv_file_name
+	view.runeCountThreadActive = false
+	view.runeCountThreadComplete = false
+
+	view.colors = []rl.Color{rl.BLUE, rl.SKYBLUE}
+	view.fileLoadingUnderway = false
+	view.preprocessed = false
+	view.currentFileRow = 0
+	view.containsHeader = true
+
+	fmt.print("loaded cells view \n")
+
+	loadCellViewFont(view, fontSize)
+}
+
+loadCellViewFont :: proc(view: ^CellsView, fontSize: f32) {
+	view.font = rl.LoadFontEx(
+		"JetBrainsMono-2.304/fonts/ttf/JetBrainsMono-Regular.ttf",
+		i32(fontSize),
+		nil,
+		0,
+	)
+	view.fontSize = fontSize
+
+	charSpacing := f32(6)
+	charSize := rl.MeasureTextEx(view.font, "A", fontSize, charSpacing)
+	view.charWidth = charSize.x
+	view.charHeight = charSize.y
+
+	fmt.print("loaded cells font \n")
+}
+
 
 render_csv :: proc(cellsView: ^CellsView) {
 	rl.ClearBackground(rl.DARKBLUE)
@@ -20,12 +57,12 @@ render_csv :: proc(cellsView: ^CellsView) {
 	// get the char index we want to start at
 	// pass it instead of zero
 	// be sure to render the header then skip to the row
-	fileCharIndex = cellsView.fileRowCharIndices[cellsView.currentFileRow]
+	fileCharIndex = cellsView.fileRowCharIndices[cellsView.currentFileRow].rowStartIndex
 
 	for i in 0 ..< i32(len(cellsView.fileRowCharIndices)) {
 		if i > cellsView.charRows {break}
 
-		fileCharIndex = cellsView.fileRowCharIndices[i]
+		fileCharIndex = cellsView.fileRowCharIndices[i].rowStartIndex
 		for {
 			char: rune
 			if fileCharIndex >= i32(len(cellsView.fileRunes)) {
