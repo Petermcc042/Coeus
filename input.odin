@@ -60,6 +60,23 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) 
 		app.resizeNeeded = true
 	}
 
+	// If the user clicks left mouse button AND the mouse is over a valid row
+	if rl.IsMouseButtonPressed(.LEFT) && panel.hoverIndex != -1 {
+
+		// Safely extract the exact file info struct from your array
+		targetFile := panel.directoryList[panel.hoverIndex]
+
+		fmt.printfln("User clicked on: %s", targetFile.name)
+
+		if targetFile.type == .Directory {
+			// It's a folder! Pass the fullpath to change directories
+			loadDirectory(targetFile.fullpath, panel)
+		} else {
+			// It's a file! Pass the fullpath to your file content reader
+			//load_file_content(targetFile.fullpath)
+		}
+	}
+
 
 	scroll := rl.GetMouseWheelMove()
 

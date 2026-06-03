@@ -45,39 +45,25 @@ startRuneCountThread :: proc(view: ^CellsView) {
 countRunesWorker :: proc(t: ^thread.Thread) {
 	view := cast(^CellsView)t.data
 
-	fd, errno := os.open(view.fileCurrentPath, os.O_RDONLY)
-	if errno != 0 {
-		fmt.eprintfln("Error opening file %s: %v", view.fileCurrentPath, errno)
-		view.fileNumRunes = 0
-		view.runeCountSuccess = false
+	// 1. Slurp the entire file into memory
+	data, err := os.read_entire_file_from_path(view.fileCurrentPath, context.allocator)
+	if err != nil {
+		// You can print the specific error (e.g., 'File Not Found')
+		fmt.eprintfln("Error reading file %s: %v", view.fileCurrentPath, err)
+		view.fileLoadSuccess = false
 		return
 	}
-	defer os.close(fd)
 
-	// 2. Turn the file handle into an io.Stream
-	stream := os.to_stream(fd)
-
-	// 3. Initialize the buffered reader using the stream
-	b_reader: bufio.Reader
-	bufio.reader_init(&b_reader, stream)
-	defer bufio.reader_destroy(&b_reader)
-
+	// 2. Convert bytes to a string and let Odin count the runes
+	file_str := string(data)
 	rune_count := 0
 
-	// 4. Stream and read runes directly
-	for {
-		rn, size, err := bufio.reader_read_rune(&b_reader)
-		if err != nil {
-			if err == .EOF {
-				break // Reached end of file safely
-			}
-			fmt.eprintfln("Error reading UTF-8 data: %v", err)
-			view.fileNumRunes = 0
-			view.runeCountSuccess = false
-			return
-		}
+	// In Odin, looping over a string automatically decodes it rune-by-rune!
+	for _ in file_str {
 		rune_count += 1
 	}
+
+	delete(data, context.allocator)
 
 	view.fileNumRunes = i32(rune_count)
 	view.runeCountSuccess = true

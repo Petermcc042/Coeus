@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:os"
 import "core:slice"
 import rl "vendor:raylib"
 
@@ -12,7 +13,7 @@ main :: proc() {
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
 	window := Window{"Adaptive Avoidance", 1280, 720, 120}
 	rl.InitWindow(window.width, window.height, window.name)
-	rl.SetTargetFPS(120)
+	rl.SetTargetFPS(200)
 
 	app: App = {}
 	footer: Footer = {}
@@ -30,6 +31,9 @@ main :: proc() {
 	defer delete(view.runesToRender)
 
 	updateAppLayout(&footer, &header, &view, &filePanel, &app)
+
+	loadDirectory(".", &filePanel)
+	defer os.file_info_slice_delete(filePanel.directoryList, context.allocator)
 
 	for !rl.WindowShouldClose() {
 		update_loop(&view, &app, &footer, &header, &filePanel)

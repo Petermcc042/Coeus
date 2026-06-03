@@ -2,6 +2,7 @@ package main
 
 
 import "core:fmt"
+import "core:os"
 import rl "vendor:raylib"
 
 initFilePanel :: proc(panel: ^FilePanel) {
@@ -32,5 +33,104 @@ drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
 		height = panel.bottomRight.y - panel.topLeft.y,
 	}
 
-	rl.DrawRectangleRec(rect, rl.Fade(rl.BEIGE, 0.2))
+	rl.DrawRectangleRec(rect, rl.Fade(rl.BEIGE, 0.1))
+
+	// 1. Grab the current mouse coordinates
+	mousePos := rl.GetMousePosition()
+
+	// Reset hover state at the start of the frame.
+	// If the mouse isn't over any file, it stays -1.
+	panel.hoverIndex = -1
+
+	currentCol: i32 = 0 // keeps track of the exact character coord
+	currentRow: i32 = 0 // keeps track of the exact character coord
+	currentCharIndex := 0
+	appendStartCount := 0
+	tempChar: rune
+
+	// idx is an Odin feature
+	for info, idx in panel.directoryList {
+
+		// 2. Define a bounding box for the ENTIRE row width
+		rowRect := rl.Rectangle {
+			x      = panel.topLeft.x,
+			y      = panel.topLeft.y + (f32(idx) * panel.charHeight),
+			width  = rect.width,
+			height = panel.charHeight,
+		}
+
+		// 3. Check if the mouse cursor is inside this specific row's box
+		if rl.CheckCollisionPointRec(mousePos, rowRect) {
+			panel.hoverIndex = i32(idx) // Store the row number!
+
+			// Draw a subtle background highlight for the hovered file row
+			rl.DrawRectangleRec(rowRect, rl.Fade(rl.SKYBLUE, 0.3))
+		}
+
+		currentCol = 0
+		currentCharIndex = 0
+		appendStartCount = 0
+
+		for {
+			if currentCol >= panel.charColumns {break}
+			if currentCharIndex >= len(info.name) {break}
+
+			pos := rl.Vector2 {
+				f32(currentCol) * panel.charWidth + panel.topLeft.x,
+				f32(currentRow) * panel.charHeight + panel.topLeft.y,
+			}
+
+			if appendStartCount < 3 {
+				if appendStartCount == 0 {
+					if info.type == .Directory {
+						tempChar = 'D'
+					} else {
+						tempChar = 'F'
+					}
+				}
+
+				if appendStartCount == 1 {
+					tempChar = ':'
+				}
+
+				if appendStartCount == 2 {
+					tempChar = ' '
+				}
+
+				currentCharIndex -= 1
+
+			} else {
+				tempChar = rune(info.name[currentCharIndex])
+			}
+
+			if tempChar != 0 {
+				rl.DrawTextCodepoint(panel.font, tempChar, pos, panel.fontSize, rl.WHITE)
+			}
+
+			currentCol += 1
+			currentCharIndex += 1
+			appendStartCount += 1
+		}
+
+		currentRow += 1
+	}
+}
+
+
+loadDirectory :: proc(filePath: string, panel: ^FilePanel) {
+	// 1. READ FIRST! The filePath string is still safe and alive in memory here.
+	infos, err := os.read_directory_by_path(filePath, 0, context.allocator)
+	if err != 0 {
+		fmt.eprintln("Error reading directory:", filePath)
+		return
+	}
+
+	// 2. NOW it is safe to delete the old list.
+	// We already successfully read the new folder contents, so we don't need filePath anymore.
+	if len(panel.directoryList) > 0 {
+		os.file_info_slice_delete(panel.directoryList, context.allocator)
+	}
+
+	// 3. Assign the new slice to the panel
+	panel.directoryList = infos
 }
