@@ -18,32 +18,49 @@ main :: proc() {
 	footer: Footer = {}
 	header: Header = {}
 	view: CellsView = {}
+	filePanel: FilePanel = {}
 
+	app.resizeNeeded = false
 	initFooter(&footer)
 	initHeader(&header)
+	initFilePanel(&filePanel)
 
 	initCellsView(&view, 20)
 	defer delete(view.fileRunes)
 	defer delete(view.runesToRender)
 
-	updateAppLayout(&footer, &header, &view)
+	updateAppLayout(&footer, &header, &view, &filePanel, &app)
 
 	for !rl.WindowShouldClose() {
-		update_loop(&view, &app, &footer, &header)
+		update_loop(&view, &app, &footer, &header, &filePanel)
 	}
 
 	rl.UnloadFont(view.font)
 	rl.CloseWindow()
 }
 
-updateAppLayout :: proc(footer: ^Footer, header: ^Header, view: ^CellsView) {
+updateAppLayout :: proc(
+	footer: ^Footer,
+	header: ^Header,
+	view: ^CellsView,
+	panel: ^FilePanel,
+	app: ^App,
+) {
+
 	footer.topLeft = {0, f32(rl.GetScreenHeight()) - footer.charHeight}
 	footer.bottomRight = {f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight())}
 
 	header.topLeft = {0, 0}
 	header.bottomRight = {f32(rl.GetScreenWidth()), header.charHeight}
 
-	view.topLeft = {0, header.charHeight}
+	full_screen := rl.GetScreenHeight()
+	// this is the end x pos and the starting x pos of the other panels
+	panelEndX := panel.charWidth * f32(panel.charColumns)
+
+	panel.topLeft = {0, header.bottomRight.y}
+	panel.bottomRight = {panelEndX, footer.topLeft.y}
+
+	view.topLeft = {panelEndX, header.charHeight}
 	view.bottomRight = {f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) - footer.charHeight}
 
 	viewWidth := view.bottomRight.x - view.topLeft.x
@@ -54,19 +71,28 @@ updateAppLayout :: proc(footer: ^Footer, header: ^Header, view: ^CellsView) {
 	view.charColumns = i32(viewWidth / view.charWidth)
 	view.charRows = i32(viewHeight / view.charHeight)
 
+	app.resizeNeeded = false
+
 	delete(view.runesToRender)
 	view.runesToRender = make([]rune, view.charColumns * view.charRows)
+
 }
 
 
-update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer, header: ^Header) {
+update_loop :: proc(
+	view: ^CellsView,
+	app: ^App,
+	footer: ^Footer,
+	header: ^Header,
+	panel: ^FilePanel,
+) {
 
 	// 3. Check for Resize
-	if rl.IsWindowResized() {
+	if rl.IsWindowResized() || app.resizeNeeded {
 		fmt.print("app layout resized \n")
-		updateAppLayout(footer, header, view)
+		updateAppLayout(footer, header, view, panel, app)
 	}
-	process_user_input(app, view)
+	process_user_input(app, view, panel)
 
 	fileLoadingLogic(view)
 
@@ -85,6 +111,7 @@ update_loop :: proc(view: ^CellsView, app: ^App, footer: ^Footer, header: ^Heade
 	draw_cursor(app, view)
 	draw_bottom_footer(footer, app)
 	drawHeader(header, app)
+	drawFilePanel(panel, app)
 
 	if view.preprocessed {
 		// render_csv profile scope is maintained inside its own proc,

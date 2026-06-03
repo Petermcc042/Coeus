@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -10,7 +11,7 @@ DOUBLE_CLICK_THRESHOLD :: 0.25 // Time in seconds
 lastClickTiming: f64 = 0.0
 doubleClick := false
 
-process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
+process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) {
 	m_pos := rl.GetMousePosition()
 
 	// Calculate tile based on pixel / cell size directly
@@ -22,6 +23,7 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 	// 2. Find the CSV column index
 	currentFieldNum := -1
 	accumulated_chars: i32 = 0
+
 
 	for width, index in cellsView.fieldRenderWidths {
 		accumulated_chars += width
@@ -47,6 +49,17 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 	if rl.IsKeyPressed(.MINUS) && rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyPressed(.KP_SUBTRACT) {
 		update_text_size(false, cellsView)
 	}
+
+	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.C) {
+		copy_runes_to_clipboard(cellsView.fileRunes)
+	}
+
+	if rl.IsKeyDown(.LEFT_CONTROL) && rl.IsKeyPressed(.B) {
+		fmt.print("close panel")
+		if panel.charColumns == 0 {panel.charColumns = 40} else {panel.charColumns = 0}
+		app.resizeNeeded = true
+	}
+
 
 	scroll := rl.GetMouseWheelMove()
 
@@ -77,14 +90,13 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView) {
 			lastClickTiming = currentTime
 		}
 	}
-	app^ = App {
-		left_mouse_clicked   = rl.IsMouseButtonDown(.LEFT),
-		right_mouse_clicked  = rl.IsMouseButtonDown(.RIGHT),
-		toggle_pause         = rl.IsKeyPressed(.SPACE),
-		mouse_world_position = mouse_y * cellsView.charColumns + mouse_x,
-		mouse_charBlock_x    = mouse_x,
-		mouse_charBlock_y    = mouse_y,
-		mouse_fieldNum       = i32(currentFieldNum),
-		doubleClick          = doubleClick,
-	}
+
+	app.left_mouse_clicked = rl.IsMouseButtonDown(.LEFT)
+	app.right_mouse_clicked = rl.IsMouseButtonDown(.RIGHT)
+	app.toggle_pause = rl.IsKeyPressed(.SPACE)
+	app.mouse_world_position = mouse_y * cellsView.charColumns + mouse_x
+	app.mouse_charBlock_x = mouse_x
+	app.mouse_charBlock_y = mouse_y
+	app.mouse_fieldNum = i32(currentFieldNum)
+	app.doubleClick = doubleClick
 }

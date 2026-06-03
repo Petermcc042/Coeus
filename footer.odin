@@ -24,9 +24,9 @@ initFooter :: proc(footer: ^Footer) {
 draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
 
 	rect := rl.Rectangle {
-		x      = 0,
-		y      = f32(rl.GetScreenHeight()) - footer.charHeight,
-		width  = f32(rl.GetScreenWidth()),
+		x      = footer.topLeft.x,
+		y      = footer.topLeft.y,
+		width  = footer.bottomRight.x - footer.topLeft.x,
 		height = footer.charHeight,
 	}
 
@@ -52,7 +52,7 @@ draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
 		footer.chars[footer.rune_index] = r
 
 		pos := rl.Vector2 {
-			f32(footer.rune_index) * footer.charWidth,
+			f32(footer.rune_index) * footer.charWidth + footer.topLeft.x,
 			f32(rl.GetScreenHeight()) - footer.charHeight,
 		}
 

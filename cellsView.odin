@@ -44,7 +44,7 @@ loadCellViewFont :: proc(view: ^CellsView, fontSize: f32) {
 renderCellsView :: proc(cellsView: ^CellsView) {
 	//rl.ClearBackground(rl.DARKBLUE)
 	rect := rl.Rectangle {
-		x      = 0,
+		x      = cellsView.topLeft.x,
 		y      = cellsView.topLeft.y,
 		width  = cellsView.bottomRight.x - cellsView.topLeft.x,
 		height = cellsView.bottomRight.y - cellsView.topLeft.y,

@@ -17,6 +17,7 @@ Window :: struct {
 
 App :: struct {
 	pause:                bool,
+	resizeNeeded:         bool,
 
 	// input state
 	left_mouse_clicked:   bool,
@@ -111,6 +112,19 @@ Header :: struct {
 	fontSize:    f32,
 	charWidth:   f32,
 	charHeight:  f32,
+}
+
+FilePanel :: struct {
+	topLeft:     [2]f32,
+	bottomRight: [2]f32,
+	columns:     i32,
+	chars:       [10000]rune,
+	rune_index:  i32,
+	font:        rl.Font,
+	fontSize:    f32,
+	charWidth:   f32,
+	charHeight:  f32,
+	charColumns: i32,
 }
 
 
