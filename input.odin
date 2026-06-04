@@ -66,7 +66,12 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) 
 		// Safely extract the exact file info struct from your array
 		targetFile := panel.directoryList[panel.hoverIndex]
 
-		fmt.printfln("User clicked on: %s index: %i", targetFile.name, panel.hoverIndex)
+		fmt.printfln(
+			"User clicked on: %s index: %i path: %s",
+			targetFile.name,
+			panel.hoverIndex,
+			targetFile.fullpath,
+		)
 
 		if targetFile.type == .Directory {
 			// It's a folder! Pass the fullpath to change directories

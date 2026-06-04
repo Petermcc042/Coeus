@@ -1,10 +1,9 @@
 package main
 
-
 import "core:fmt"
-import "core:mem"
 import "core:os"
 import "core:path/filepath"
+import "core:strings"
 import rl "vendor:raylib"
 
 initFilePanel :: proc(panel: ^FilePanel) {
@@ -128,32 +127,40 @@ loadDirectory :: proc(filePath: string, panel: ^FilePanel) {
 	}
 	defer os.file_info_slice_delete(infos, context.allocator)
 
-	// Free the old list before replacing it
-	for i in 0 ..< panel.directoryCount {
-		os.file_info_delete(panel.directoryList[i], context.allocator)
-	}
-
-	// Zero out all slots so no stale data remains
-	panel.directoryList = {}
 	panel.directoryCount = 0
 
-	// Update path buffers
-	mem.zero_slice(panel.currentPath[:])
-	mem.zero_slice(panel.parentPath[:])
-	copy_from_string(panel.currentPath[:], filePath)
-	parent := filepath.dir(filePath)
-	copy_from_string(panel.parentPath[:], parent)
+	for &pathInfo, idx in panel.directoryList {
+		if idx == 0 {
+			//set the first item in the list always as the folder up
+			// could update this to have a standard go to
+			if len(pathInfo.name) > 0 do delete(pathInfo.fullpath)
 
-	// ".." entry at index 0
-	panel.directoryList[0] = os.File_Info {
-		name = "..",
-		type = .Directory,
-	}
+			fullpath := strings.clone(
+				filepath.dir(filepath.dir(infos[panel.directoryCount].fullpath)),
+			)
+			name := "folder up"
+			type := os.File_Type.Directory
 
-	// Deep copy each real entry into slots 1..n
-	count := min(len(infos), 99)
-	for i in 0 ..< count {
-		panel.directoryList[i + 1], _ = os.file_info_clone(infos[i], context.allocator)
+			pathInfo.fullpath = fullpath
+			pathInfo.name = name
+			pathInfo.type = type
+			continue
+		}
+
+		pathInfo = {}
+		if panel.directoryCount >= len(infos) {continue}
+
+		if len(pathInfo.name) > 0 do delete(pathInfo.name)
+		if len(pathInfo.name) > 0 do delete(pathInfo.fullpath)
+
+		name := strings.clone(infos[panel.directoryCount].name)
+		path := strings.clone(infos[panel.directoryCount].fullpath)
+		type := infos[panel.directoryCount].type
+
+		pathInfo.fullpath = path
+		pathInfo.name = name
+		pathInfo.type = type
+
+		panel.directoryCount += 1
 	}
-	panel.directoryCount = count + 1
 }

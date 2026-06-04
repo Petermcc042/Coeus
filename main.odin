@@ -70,8 +70,6 @@ updateAppLayout :: proc(
 	viewWidth := view.bottomRight.x - view.topLeft.x
 	viewHeight := f32(rl.GetScreenHeight()) - footer.charHeight
 
-	fmt.print("viewWidth: ", viewWidth, " viewHeigh: ", viewHeight)
-
 	view.charColumns = i32(viewWidth / view.charWidth)
 	view.charRows = i32(viewHeight / view.charHeight)
 

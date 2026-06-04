@@ -123,7 +123,7 @@ FilePanel :: struct {
 	charWidth:      f32,
 	charHeight:     f32,
 	charColumns:    i32, // number of columns in the pane determined by char width
-	directoryList:  [100]os.File_Info,
+	directoryList:  [100]PathInfo,
 	directoryCount: int,
 	currentPath:    [200]u8,
 	parentPath:     [200]u8,
@@ -142,4 +142,10 @@ FieldType :: enum {
 RowInfo :: struct {
 	rowStartIndex: i32,
 	rowEndIndex:   i32,
+}
+
+PathInfo :: struct {
+	name:     string,
+	fullpath: string,
+	type:     os.File_Type,
 }
