@@ -33,7 +33,7 @@ main :: proc() {
 	updateAppLayout(&footer, &header, &view, &filePanel, &app)
 
 	loadDirectory(".", &filePanel)
-	defer os.file_info_slice_delete(filePanel.directoryList, context.allocator)
+	//defer os.file_info_slice_delete(filePanel.directoryList, context.allocator)
 
 	for !rl.WindowShouldClose() {
 		update_loop(&view, &app, &footer, &header, &filePanel)

@@ -2,7 +2,9 @@ package main
 
 
 import "core:fmt"
+import "core:mem"
 import "core:os"
+import "core:path/filepath"
 import rl "vendor:raylib"
 
 initFilePanel :: proc(panel: ^FilePanel) {
@@ -41,6 +43,7 @@ drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
 	// Reset hover state at the start of the frame.
 	// If the mouse isn't over any file, it stays -1.
 	panel.hoverIndex = -1
+
 
 	currentCol: i32 = 0 // keeps track of the exact character coord
 	currentRow: i32 = 0 // keeps track of the exact character coord
@@ -118,19 +121,39 @@ drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
 
 
 loadDirectory :: proc(filePath: string, panel: ^FilePanel) {
-	// 1. READ FIRST! The filePath string is still safe and alive in memory here.
 	infos, err := os.read_directory_by_path(filePath, 0, context.allocator)
 	if err != 0 {
 		fmt.eprintln("Error reading directory:", filePath)
 		return
 	}
+	defer os.file_info_slice_delete(infos, context.allocator)
 
-	// 2. NOW it is safe to delete the old list.
-	// We already successfully read the new folder contents, so we don't need filePath anymore.
-	if len(panel.directoryList) > 0 {
-		os.file_info_slice_delete(panel.directoryList, context.allocator)
+	// Free the old list before replacing it
+	for i in 0 ..< panel.directoryCount {
+		os.file_info_delete(panel.directoryList[i], context.allocator)
 	}
 
-	// 3. Assign the new slice to the panel
-	panel.directoryList = infos
+	// Zero out all slots so no stale data remains
+	panel.directoryList = {}
+	panel.directoryCount = 0
+
+	// Update path buffers
+	mem.zero_slice(panel.currentPath[:])
+	mem.zero_slice(panel.parentPath[:])
+	copy_from_string(panel.currentPath[:], filePath)
+	parent := filepath.dir(filePath)
+	copy_from_string(panel.parentPath[:], parent)
+
+	// ".." entry at index 0
+	panel.directoryList[0] = os.File_Info {
+		name = "..",
+		type = .Directory,
+	}
+
+	// Deep copy each real entry into slots 1..n
+	count := min(len(infos), 99)
+	for i in 0 ..< count {
+		panel.directoryList[i + 1], _ = os.file_info_clone(infos[i], context.allocator)
+	}
+	panel.directoryCount = count + 1
 }

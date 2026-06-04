@@ -114,17 +114,20 @@ Header :: struct {
 }
 
 FilePanel :: struct {
-	topLeft:       [2]f32, // x.y coord of the top left of the pane
-	bottomRight:   [2]f32, // x.y coord of the bottom right of the pane
-	chars:         [10000]rune,
-	rune_index:    i32,
-	font:          rl.Font,
-	fontSize:      f32,
-	charWidth:     f32,
-	charHeight:    f32,
-	charColumns:   i32, // number of columns in the pane determined by char width
-	directoryList: []os.File_Info,
-	hoverIndex:    i32, // will be -1 if we are not on a file
+	topLeft:        [2]f32, // x.y coord of the top left of the pane
+	bottomRight:    [2]f32, // x.y coord of the bottom right of the pane
+	chars:          [10000]rune,
+	rune_index:     i32,
+	font:           rl.Font,
+	fontSize:       f32,
+	charWidth:      f32,
+	charHeight:     f32,
+	charColumns:    i32, // number of columns in the pane determined by char width
+	directoryList:  [100]os.File_Info,
+	directoryCount: int,
+	currentPath:    [200]u8,
+	parentPath:     [200]u8,
+	hoverIndex:     i32, // will be -1 if we are not on a file
 }
 
 
