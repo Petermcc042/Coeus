@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:strings"
 import rl "vendor:raylib"
 
 // Configuration
@@ -11,7 +12,12 @@ DOUBLE_CLICK_THRESHOLD :: 0.25 // Time in seconds
 lastClickTiming: f64 = 0.0
 doubleClick := false
 
-process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) {
+process_user_input :: proc(
+	app: ^App,
+	cellsView: ^CellsView,
+	panel: ^FilePanel,
+	info: ^FileLoadingInfo,
+) {
 	m_pos := rl.GetMousePosition()
 
 	// Calculate tile based on pixel / cell size directly
@@ -38,8 +44,8 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) 
 	mouse_y = clamp(mouse_y, 0, cellsView.charRows - 1)
 
 	if rl.IsKeyPressed(.ENTER) {
-		cellsView.fileLoadingUnderway = true
-		cellsView.runeCountNeedsStarted = true
+		info.fileLoadingUnderway = true
+		info.runeCountNeedsStarted = true
 	}
 
 	if rl.IsKeyPressed(.EQUAL) && rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyPressed(.KP_ADD) {
@@ -63,6 +69,8 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) 
 	// If the user clicks left mouse button AND the mouse is over a valid row
 	if rl.IsMouseButtonPressed(.LEFT) && panel.hoverIndex != -1 {
 
+		panel.currentFileIndex = panel.hoverIndex
+
 		// Safely extract the exact file info struct from your array
 		targetFile := panel.directoryList[panel.hoverIndex]
 
@@ -74,15 +82,15 @@ process_user_input :: proc(app: ^App, cellsView: ^CellsView, panel: ^FilePanel) 
 		)
 
 		if targetFile.type == .Directory {
-			// It's a folder! Pass the fullpath to change directories
-			if targetFile.name == ".." {
-				loadDirectory(string(panel.parentPath[:]), panel)
-			} else {
-				loadDirectory(targetFile.fullpath, panel)
-			}
+			loadDirectory(targetFile.fullpath, panel)
 
 		} else {
-			// It's a file! Pass the fullpath to your file content reader
+			if strings.has_suffix(targetFile.fullpath, ".csv") {
+				cellsView.fileCurrentPath = targetFile.fullpath
+				info.fileLoadingUnderway = true
+				info.runeCountNeedsStarted = true
+			}
+
 			//load_file_content(targetFile.fullpath)
 		}
 	}

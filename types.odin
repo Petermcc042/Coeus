@@ -4,7 +4,7 @@ import "core:os"
 import "core:thread"
 import rl "vendor:raylib"
 
-csv_file_name :: "data/testey.csv" //easy
+// csv_file_name :: "data/testey.csv" //easy
 // csv_file_name :: "data/testier.csv"
 // csv_file_name :: "data/customers-500000.csv"
 
@@ -43,51 +43,55 @@ CharacterBlock :: struct {
 // this is the actual panel where cells will be shown
 // it contains the information about what file is loaded
 CellsView :: struct {
-	preprocessed:               bool,
-	colors:                     []rl.Color,
-	font:                       rl.Font,
-	fontSize:                   f32,
-	charWidth:                  f32,
-	charHeight:                 f32,
-	topLeft:                    [2]f32,
-	bottomRight:                [2]f32,
+	colors:             []rl.Color,
+	font:               rl.Font,
+	fontSize:           f32,
+	charWidth:          f32,
+	charHeight:         f32,
+	topLeft:            [2]f32,
+	bottomRight:        [2]f32,
 
 
 	// layout of the cells
-	charColumns:                i32, // width of the viewer in columns
-	charRows:                   i32, // height of the viewer in rows
-	fileRowCharIndices:         [dynamic]RowInfo, // the index positions in []fileRunes that are the start of rows
-	fieldRenderHeights:         []i32, // an array containing the height in characters of each row of fields being displayed
-	fieldRenderWidths:          []i32, // an array containing the width in characters of each column of fields being displayed
-	fileFieldsTypes:            []FieldType,
+	charColumns:        i32, // width of the viewer in columns
+	charRows:           i32, // height of the viewer in rows
+	fileRowCharIndices: [dynamic]RowInfo, // the index positions in []fileRunes that are the start of rows
+	fieldRenderHeights: []i32, // an array containing the height in characters of each row of fields being displayed
+	fieldRenderWidths:  []i32, // an array containing the width in characters of each column of fields being displayed
+	fileFieldsTypes:    []FieldType,
 
 	// to render
-	containsHeader:             bool,
-	currentFileRow:             i32,
-	runesToRender:              []rune,
+	containsHeader:     bool,
+	currentFileRow:     i32,
+	fileRunes:          []rune, // the loaded file
+	fileNumRunes:       i32,
+	fileCurrentPath:    string,
+}
 
+FileLoadingInfo :: struct {
 	//this bool controls the whole file loading system
 	fileLoadingUnderway:        bool,
+	fileLoaded:                 bool,
 
-	// rune count thread
+	// Step 1: rune count thread
 	runeCountNeedsStarted:      bool,
 	runeCountSuccess:           bool,
 	runeCountThread:            ^thread.Thread,
 	runeCountThreadActive:      bool,
 	runeCountThreadComplete:    bool,
-	fileNumRunes:               i32,
-	fileCurrentPath:            string,
 
-	// file loader thread
-	fileRunes:                  []rune, // the loaded file
+	// step 2: init the array with correct size
 	runeArrayNeedsInitialised:  bool, // used to kick off rune array initialisation
+
+	// step 3: file loader thread
 	fileLoadNeedsStarted:       bool, // used to begin the thread to load the current file
-	fileProcessingNeedsStarted: bool, // used to begin the column and row count proc
 	fileLoadSuccess:            bool, // were there any errors in the file load thread
 	fileLoadThread:             ^thread.Thread,
 	fileLoadThreadActive:       bool,
 	fileLoadThreadComplete:     bool,
-	// fileCurrentPath:         string, used from above
+
+	// step 4: process column info ^ todo: move to step 1
+	fileProcessingNeedsStarted: bool, // used to begin the column and row count proc
 }
 
 
@@ -114,20 +118,19 @@ Header :: struct {
 }
 
 FilePanel :: struct {
-	topLeft:        [2]f32, // x.y coord of the top left of the pane
-	bottomRight:    [2]f32, // x.y coord of the bottom right of the pane
-	chars:          [10000]rune,
-	rune_index:     i32,
-	font:           rl.Font,
-	fontSize:       f32,
-	charWidth:      f32,
-	charHeight:     f32,
-	charColumns:    i32, // number of columns in the pane determined by char width
-	directoryList:  [100]PathInfo,
-	directoryCount: int,
-	currentPath:    [200]u8,
-	parentPath:     [200]u8,
-	hoverIndex:     i32, // will be -1 if we are not on a file
+	topLeft:          [2]f32, // x.y coord of the top left of the pane
+	bottomRight:      [2]f32, // x.y coord of the bottom right of the pane
+	chars:            [10000]rune,
+	rune_index:       i32,
+	font:             rl.Font,
+	fontSize:         f32,
+	charWidth:        f32,
+	charHeight:       f32,
+	charColumns:      i32, // number of columns in the pane determined by char width
+	directoryList:    [100]PathInfo,
+	directoryCount:   int,
+	hoverIndex:       i32, // will be -1 if we are not on a file
+	currentFileIndex: i32,
 }
 
 

@@ -9,6 +9,15 @@ It is part of generally learning Odin + Raylib to build cross platform performan
 
 # Things to do
 
+## Load Files From File Pane
+Currently we preload a file. 
+Load a file via the file pane instead.
+
+## Auto Size Fields
+Currently all fields are loaded as size 10. 
+On first pass in the loading thread also store the max width of a field
+Set the char column size to this or a max value of 15
+
 ## Sizing of columns
 this should be easy the only tough bit is learning how to work with on mouse down and mouse exit to determine drag distance.
 perhaps in loading a file we should also store the max character width of a column.

@@ -4,18 +4,8 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 initCellsView :: proc(view: ^CellsView, fontSize: f32) {
-	// tracking for counting rune thread
-	view.runeCountNeedsStarted = false
-	view.runeCountThread = nil
-	view.fileNumRunes = 0
-	view.fileCurrentPath = csv_file_name
-	view.runeCountThreadActive = false
-	view.runeCountThreadComplete = false
-
-	view.colors = []rl.Color{rl.BLUE, rl.SKYBLUE}
-	view.fileLoadingUnderway = false
-	view.preprocessed = false
 	view.currentFileRow = 0
+	view.fileNumRunes = 0
 	view.containsHeader = true
 
 	fmt.print("loaded cells view \n")

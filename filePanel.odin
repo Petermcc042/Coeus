@@ -61,12 +61,16 @@ drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
 			height = panel.charHeight,
 		}
 
+		if i32(idx) == panel.currentFileIndex {
+			rl.DrawRectangleRec(rowRect, rl.Fade(rl.SKYBLUE, 0.3))
+		}
+
 		// 3. Check if the mouse cursor is inside this specific row's box
 		if rl.CheckCollisionPointRec(mousePos, rowRect) {
 			panel.hoverIndex = i32(idx) // Store the row number!
 
-			// Draw a subtle background highlight for the hovered file row
 			rl.DrawRectangleRec(rowRect, rl.Fade(rl.SKYBLUE, 0.3))
+
 		}
 
 		currentCol = 0

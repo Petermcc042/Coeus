@@ -20,23 +20,22 @@ main :: proc() {
 	header: Header = {}
 	view: CellsView = {}
 	filePanel: FilePanel = {}
+	info: FileLoadingInfo = {}
 
 	app.resizeNeeded = false
 	initFooter(&footer)
 	initHeader(&header)
 	initFilePanel(&filePanel)
-
+	initFileLoadInfo(&info)
 	initCellsView(&view, 20)
 	defer delete(view.fileRunes)
-	defer delete(view.runesToRender)
 
 	updateAppLayout(&footer, &header, &view, &filePanel, &app)
 
 	loadDirectory(".", &filePanel)
-	//defer os.file_info_slice_delete(filePanel.directoryList, context.allocator)
 
 	for !rl.WindowShouldClose() {
-		update_loop(&view, &app, &footer, &header, &filePanel)
+		update_loop(&view, &app, &footer, &header, &filePanel, &info)
 	}
 
 	rl.UnloadFont(view.font)
@@ -74,10 +73,6 @@ updateAppLayout :: proc(
 	view.charRows = i32(viewHeight / view.charHeight)
 
 	app.resizeNeeded = false
-
-	delete(view.runesToRender)
-	view.runesToRender = make([]rune, view.charColumns * view.charRows)
-
 }
 
 
@@ -87,6 +82,7 @@ update_loop :: proc(
 	footer: ^Footer,
 	header: ^Header,
 	panel: ^FilePanel,
+	info: ^FileLoadingInfo,
 ) {
 
 	// 3. Check for Resize
@@ -94,9 +90,9 @@ update_loop :: proc(
 		fmt.print("app layout resized \n")
 		updateAppLayout(footer, header, view, panel, app)
 	}
-	process_user_input(app, view, panel)
+	process_user_input(app, view, panel, info)
 
-	fileLoadingLogic(view)
+	fileLoadingLogic(view, info)
 
 	if app.doubleClick {
 		fmt.print("double click mf!...\n")
@@ -115,55 +111,12 @@ update_loop :: proc(
 	drawHeader(header, app)
 	drawFilePanel(panel, app)
 
-	if view.preprocessed {
-		// render_csv profile scope is maintained inside its own proc,
-		// or will nest cleanly here if it contains one
-		renderCellsView(view)
-	}
+	if info.fileLoaded do renderCellsView(view)
 
 	update_cell_width(view, app)
 
 	rl.EndDrawing()
 }
-
-fileLoadingLogic :: proc(view: ^CellsView) {
-
-	if !view.fileLoadingUnderway {return}
-
-	// 1. find length of file
-	if view.runeCountNeedsStarted {
-		startRuneCountThread(view)
-		view.runeCountNeedsStarted = false
-	}
-
-	pollRuneCountThread(view)
-
-	// 2. create array
-	if view.runeArrayNeedsInitialised {
-		if !view.runeCountSuccess {
-			// do something here to show there was an error
-		} else {
-			view.fileRunes = make([]rune, view.fileNumRunes)
-			view.runeArrayNeedsInitialised = false
-			view.fileLoadNeedsStarted = true
-		}
-	}
-
-	// 3. load file using fixed array
-	if view.fileLoadNeedsStarted {
-		startLoadFileThread(view)
-		view.fileLoadNeedsStarted = false
-	}
-
-	pollFileLoadThread(view)
-
-	if view.fileProcessingNeedsStarted {
-		text := []rune{'1', '2', '.', '5'}
-		//cell_is_numeric(text)
-		process_csv(view)
-	}
-}
-
 
 update_cell_width :: proc(cellsView: ^CellsView, app: ^App) {
 
@@ -205,10 +158,6 @@ process_csv :: proc(cellsView: ^CellsView) {
 
 	cellsView.fieldRenderHeights = make([]i32, rowCount)
 	slice.fill(cellsView.fieldRenderHeights, 1)
-
-	cellsView.preprocessed = true
-	cellsView.fileLoadingUnderway = false
-	fmt.printfln("file processed")
 }
 
 update_text_size :: proc(increase: bool, cellsView: ^CellsView) {
