@@ -37,18 +37,16 @@ fileLoadingLogic :: proc(view: ^CellsView, info: ^FileLoadingInfo) {
 
 	// 2. create array
 	if info.runeArrayNeedsInitialised {
-		if !info.runeCountSuccess {
-			// do something here to show there was an error
-		} else {
-			delete(view.fileRunes, context.allocator)
-			view.fileRunes = make([]rune, view.fileNumRunes)
-			info.runeArrayNeedsInitialised = false
-			info.fileLoadNeedsStarted = true
-		}
+		delete(view.fileRunes, context.allocator)
+		view.fileRunes = make([]rune, view.fileNumRunes)
+		info.runeArrayNeedsInitialised = false
+		info.fileLoadNeedsStarted = true
+		fmt.println("Rune array initialised!")
 	}
 
 	// 3. load file using fixed array
 	if info.fileLoadNeedsStarted {
+		fmt.println("Starting Loading Thread!")
 		startLoadFileThread(info, view)
 		info.fileLoadNeedsStarted = false
 	}
