@@ -1,8 +1,6 @@
 package main
 
-import "core:bufio"
 import "core:fmt"
-import "core:io"
 import "core:os"
 import "core:thread"
 
@@ -22,16 +20,15 @@ pollRuneCountThread :: proc(info: ^FileLoadingInfo, view: ^CellsView) {
 			info.runeCountThreadActive = false
 			info.runeCountThreadComplete = true
 			info.runeArrayNeedsInitialised = true
-			fmt.println("Thread finished execution safely!")
-			fmt.printfln("File Read Rune Count: %i", view.fileNumRunes)
+			fmt.println("1. Count Thread finished execution safely!")
+			fmt.printfln("1. File Read Rune Count: %i", view.fileNumRunes)
 		}
 	}
 }
 
 
 startRuneCountThread :: proc(view: ^CellsView, info: ^FileLoadingInfo) {
-
-	fmt.println("start rune count proc: if last message thread is still active")
+	fmt.println("1. start rune count proc")
 	if info.fileLoadingUnderway && !info.runeCountThreadActive {
 		info.runeCountThreadComplete = false
 		info.runeCountThread = thread.create(countRunesWorker)
@@ -44,7 +41,7 @@ startRuneCountThread :: proc(view: ^CellsView, info: ^FileLoadingInfo) {
 }
 
 countRunesWorker :: proc(t: ^thread.Thread) {
-	fmt.println("in thread now:")
+	fmt.println("1. in thread now:")
 
 	view := cast(^CellsView)t.data
 
@@ -52,23 +49,55 @@ countRunesWorker :: proc(t: ^thread.Thread) {
 	data, err := os.read_entire_file_from_path(view.fileCurrentPath, context.allocator)
 	if err != nil {
 		// You can print the specific error (e.g., 'File Not Found')
-		fmt.eprintfln("Error reading file %s: %v", view.fileCurrentPath, err)
+		fmt.eprintfln("1. Error reading file %s: %v", view.fileCurrentPath, err)
 		//view.fileLoadSuccess = false
 		return
 	}
 
 	// 2. Convert bytes to a string and let Odin count the runes
 	file_str := string(data)
-	rune_count := 0
+	rune_count: i32 = 0
+	rowCount: i32 = 0
+	fieldCount: i32 = 0
+	inQuotes := false
 
 	// In Odin, looping over a string automatically decodes it rune-by-rune!
-	for _ in file_str {
+	for rune in file_str {
+		if rune == '\r' {
+			rune_count += 1
+			continue
+		}
+
+
+		if rune == '"' {
+			if inQuotes {
+				inQuotes = false
+			} else {
+				inQuotes = true
+			}
+		}
+
+
+		if (rune == ',' && inQuotes == false) || rune == '\n' {
+
+			if rowCount < 1 {
+				fieldCount += 1
+			}
+
+
+			if rune == '\n' {
+				rowCount += 1
+			}
+		}
+
 		rune_count += 1
 	}
 
 	delete(data, context.allocator)
 
-	view.fileNumRunes = i32(rune_count)
+	view.fileNumRunes = rune_count
+	view.fileNumRows = rowCount
+	view.fileNumFields = fieldCount
 	//view.runeCountSuccess = true
 
 }

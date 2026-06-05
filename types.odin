@@ -55,7 +55,7 @@ CellsView :: struct {
 	// layout of the cells
 	charColumns:        i32, // width of the viewer in columns
 	charRows:           i32, // height of the viewer in rows
-	fileRowCharIndices: [dynamic]RowInfo, // the index positions in []fileRunes that are the start of rows
+	fileRowCharIndices: []RowInfo, // the index positions in []fileRunes that are the start of rows
 	fieldRenderHeights: []i32, // an array containing the height in characters of each row of fields being displayed
 	fieldRenderWidths:  []i32, // an array containing the width in characters of each column of fields being displayed
 	fileFieldsTypes:    []FieldType,
@@ -65,6 +65,8 @@ CellsView :: struct {
 	currentFileRow:     i32,
 	fileRunes:          []rune, // the loaded file
 	fileNumRunes:       i32,
+	fileNumRows:        i32,
+	fileNumFields:      i32,
 	fileCurrentPath:    string,
 }
 

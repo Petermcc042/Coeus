@@ -151,11 +151,12 @@ loadDirectory :: proc(filePath: string, panel: ^FilePanel) {
 			continue
 		}
 
-		pathInfo = {}
-		if panel.directoryCount >= len(infos) {continue}
 
 		if len(pathInfo.name) > 0 do delete(pathInfo.name)
 		if len(pathInfo.name) > 0 do delete(pathInfo.fullpath)
+
+		pathInfo = {}
+		if panel.directoryCount >= len(infos) {continue}
 
 		name := strings.clone(infos[panel.directoryCount].name)
 		path := strings.clone(infos[panel.directoryCount].fullpath)

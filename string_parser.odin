@@ -92,7 +92,8 @@ checkColumns :: proc(view: ^CellsView) {
 
 checkCellFormat :: proc(runes: []rune, info: CellInfo) -> FieldType {
 	if len(runes) == 0 do return FieldType.String
-	s := utf8.runes_to_string(runes, context.temp_allocator)
+	s := utf8.runes_to_string(runes, context.allocator)
+	defer delete(s)
 	if info.containsDecimal {
 		floater, ok := strconv.parse_f64(s)
 		if ok {

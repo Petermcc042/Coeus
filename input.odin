@@ -17,6 +17,7 @@ process_user_input :: proc(
 	cellsView: ^CellsView,
 	panel: ^FilePanel,
 	info: ^FileLoadingInfo,
+	view: ^CellsView,
 ) {
 	m_pos := rl.GetMousePosition()
 
@@ -87,8 +88,7 @@ process_user_input :: proc(
 		} else {
 			if strings.has_suffix(targetFile.fullpath, ".csv") {
 				cellsView.fileCurrentPath = targetFile.fullpath
-				info.fileLoadingUnderway = true
-				info.runeCountNeedsStarted = true
+				resetFileLoading(view, info)
 			}
 
 			//load_file_content(targetFile.fullpath)

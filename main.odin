@@ -2,13 +2,38 @@ package main
 
 import "core:fmt"
 import "core:math"
-import "core:os"
+import "core:mem"
 import "core:slice"
 import rl "vendor:raylib"
 
 debugCountdown: f32 = 1
 
 main :: proc() {
+	// 1. Set up the tracking allocator
+	track: mem.Tracking_Allocator
+	mem.tracking_allocator_init(&track, context.allocator)
+	defer mem.tracking_allocator_destroy(&track)
+
+	// 2. Override the current context allocator
+	context.allocator = mem.tracking_allocator(&track)
+
+	// 3. Set up a defer block to print leaks at the very end of main
+	defer {
+		if len(track.allocation_map) > 0 {
+			fmt.eprintf("=== %v Allocations Leaked ===\n", len(track.allocation_map))
+			for _, entry in track.allocation_map {
+				fmt.eprintf("- %v bytes leaked at %v\n", entry.size, entry.location)
+			}
+		}
+		if len(track.bad_free_array) > 0 {
+			fmt.eprintf("=== %v Bad Frees Detected ===\n", len(track.bad_free_array))
+			for entry in track.bad_free_array {
+				fmt.eprintf("- Bad free at %v\n", entry.location)
+			}
+		}
+	}
+
+
 	//SetConfigFlags(FLAG_WINDOW_HIGHDPI);
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
 	window := Window{"Adaptive Avoidance", 1280, 720, 120}
@@ -90,7 +115,7 @@ update_loop :: proc(
 		fmt.print("app layout resized \n")
 		updateAppLayout(footer, header, view, panel, app)
 	}
-	process_user_input(app, view, panel, info)
+	process_user_input(app, view, panel, info, view)
 
 	fileLoadingLogic(view, info)
 
