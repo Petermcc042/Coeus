@@ -74,7 +74,7 @@ sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 
 	// Verify the result
 	for entry in entries {
-		fmt.printf("Row: %d, Key: %s\n", entry.rowStartIndex, entry.key)
+		//fmt.printf("Row: %d, Key: %s\n", entry.rowStartIndex, entry.key)
 	}
 
 	// // 4. Repopulate your original index array with the newly sorted layout
@@ -84,7 +84,7 @@ sortColumn :: proc(cellsView: ^CellsView, fieldNum: i32) {
 	}
 
 	for rowIndex in cellsView.fileRowCharIndices {
-		fmt.print(rowIndex, "\n")
+		//fmt.print(rowIndex, "\n")
 	}
 }
 

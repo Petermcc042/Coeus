@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:os"
+import "core:slice"
 import "core:thread"
 
 initFileLoadInfo :: proc(info: ^FileLoadingInfo) {
@@ -26,6 +27,13 @@ initFileLoadInfo :: proc(info: ^FileLoadingInfo) {
 fileLoadingLogic :: proc(view: ^CellsView, info: ^FileLoadingInfo) {
 
 	if !info.fileLoadingUnderway {return}
+
+	if info.needsReset {
+		resetFileLoading(view, info)
+		view.fieldRenderWidths = make([dynamic]i32)
+		view.fieldRenderHeights = make([dynamic]i32)
+		info.needsReset = false
+	}
 
 	// 1. find length of file: no allocations or deallocations here
 	if info.runeCountNeedsStarted {
@@ -55,7 +63,6 @@ fileLoadingLogic :: proc(view: ^CellsView, info: ^FileLoadingInfo) {
 	pollFileLoadThread(view, info)
 
 	if info.fileProcessingNeedsStarted {
-		process_csv(view)
 		info.fileLoaded = true
 		info.fileProcessingNeedsStarted = false
 		info.fileLoadingUnderway = false

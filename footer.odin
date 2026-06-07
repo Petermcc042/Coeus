@@ -39,8 +39,8 @@ draw_bottom_footer :: proc(footer: ^Footer, app: ^App) {
 	footer_text := fmt.tprintf(
 		"FPS: %d | X: %d, Y: %d",
 		fps,
-		app.mouse_charBlock_x,
-		app.mouse_charBlock_y,
+		app.mouse_viewCharBlock_x,
+		app.mouse_viewCharBlock_y,
 	)
 
 	// 2. Clear the old runes and copy the new string into your fixed rune array

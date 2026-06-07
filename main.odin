@@ -6,8 +6,6 @@ import "core:mem"
 import "core:slice"
 import rl "vendor:raylib"
 
-debugCountdown: f32 = 1
-
 main :: proc() {
 	// 1. Set up the tracking allocator
 	track: mem.Tracking_Allocator
@@ -38,7 +36,7 @@ main :: proc() {
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
 	window := Window{"Adaptive Avoidance", 1280, 720, 120}
 	rl.InitWindow(window.width, window.height, window.name)
-	rl.SetTargetFPS(200)
+	// rl.SetTargetFPS(200)
 
 	app: App = {}
 	footer: Footer = {}
@@ -46,21 +44,30 @@ main :: proc() {
 	view: CellsView = {}
 	filePanel: FilePanel = {}
 	info: FileLoadingInfo = {}
+	colState := ColumnState {
+		dragged_column = -1,
+	}
 
 	app.resizeNeeded = false
 	initFooter(&footer)
 	initHeader(&header)
 	initFilePanel(&filePanel)
+	defer (clearFilePanel(&filePanel))
+
 	initFileLoadInfo(&info)
 	initCellsView(&view, 20)
 	defer delete(view.fileRunes)
+	defer delete(view.fileFieldsTypes)
+	defer delete(view.fileRowCharIndices)
+	defer delete(view.fieldRenderHeights)
+	defer delete(view.fieldRenderWidths)
 
 	updateAppLayout(&footer, &header, &view, &filePanel, &app)
 
 	loadDirectory(".", &filePanel)
 
 	for !rl.WindowShouldClose() {
-		update_loop(&view, &app, &footer, &header, &filePanel, &info)
+		update_loop(&view, &app, &footer, &header, &filePanel, &info, &colState)
 	}
 
 	rl.UnloadFont(view.font)
@@ -88,11 +95,25 @@ updateAppLayout :: proc(
 	panel.topLeft = {0, header.bottomRight.y}
 	panel.bottomRight = {panelEndX, footer.topLeft.y}
 
+	panel.rect = rl.Rectangle {
+		x      = panel.topLeft.x,
+		y      = panel.topLeft.y,
+		width  = panel.bottomRight.x - panel.topLeft.x,
+		height = panel.bottomRight.y - panel.topLeft.y,
+	}
+
 	view.topLeft = {panelEndX, header.charHeight}
 	view.bottomRight = {f32(rl.GetScreenWidth()), f32(rl.GetScreenHeight()) - footer.charHeight}
 
 	viewWidth := view.bottomRight.x - view.topLeft.x
 	viewHeight := f32(rl.GetScreenHeight()) - footer.charHeight
+
+	view.rect = rl.Rectangle {
+		x      = view.topLeft.x,
+		y      = view.topLeft.y,
+		width  = view.bottomRight.x - view.topLeft.x,
+		height = view.bottomRight.y - view.topLeft.y,
+	}
 
 	view.charColumns = i32(viewWidth / view.charWidth)
 	view.charRows = i32(viewHeight / view.charHeight)
@@ -108,6 +129,7 @@ update_loop :: proc(
 	header: ^Header,
 	panel: ^FilePanel,
 	info: ^FileLoadingInfo,
+	colState: ^ColumnState,
 ) {
 
 	// 3. Check for Resize
@@ -123,7 +145,7 @@ update_loop :: proc(
 		fmt.print("double click mf!...\n")
 	}
 
-	if rl.IsMouseButtonPressed(.LEFT) && app.mouse_charBlock_y == 0 {
+	if rl.IsMouseButtonPressed(.LEFT) && app.mouse_viewCharBlock_y == 0 && view.currentPane {
 		sortColumn(view, app.mouse_fieldNum)
 	}
 
@@ -136,7 +158,7 @@ update_loop :: proc(
 	drawHeader(header, app)
 	drawFilePanel(panel, app)
 
-	if info.fileLoaded do renderCellsView(view)
+	if info.fileLoaded do renderCellsView(view, colState)
 
 	update_cell_width(view, app)
 
@@ -163,28 +185,6 @@ update_cell_width :: proc(cellsView: ^CellsView, app: ^App) {
 	}
 }
 
-process_csv :: proc(cellsView: ^CellsView) {
-
-	colCount := 0
-	rowCount := 0
-
-	for char in cellsView.fileRunes {
-		if char == ',' && rowCount == 0 {
-			colCount += 1
-		}
-
-		if char == '\n' {
-			rowCount += 1
-		}
-	}
-
-	cellsView.fieldRenderWidths = make([]i32, colCount + 1)
-	slice.fill(cellsView.fieldRenderWidths, 10)
-
-	cellsView.fieldRenderHeights = make([]i32, rowCount)
-	slice.fill(cellsView.fieldRenderHeights, 1)
-}
-
 update_text_size :: proc(increase: bool, cellsView: ^CellsView) {
 	if (increase) {
 		new_size: f32 = cellsView.fontSize + 10
@@ -196,9 +196,10 @@ update_text_size :: proc(increase: bool, cellsView: ^CellsView) {
 }
 
 draw_cursor :: proc(app: ^App, view: ^CellsView) {
+	if !view.currentPane {return}
 	rect := rl.Rectangle {
-		x      = f32(app.mouse_charBlock_x) * view.charWidth,
-		y      = f32(app.mouse_charBlock_y) * view.charHeight,
+		x      = f32(app.mouse_viewCharBlock_x) * view.charWidth + view.topLeft.x,
+		y      = f32(app.mouse_viewCharBlock_y) * view.charHeight + view.topLeft.y,
 		width  = view.charWidth,
 		height = view.charHeight,
 	}

@@ -25,16 +25,25 @@ initFilePanel :: proc(panel: ^FilePanel) {
 	fmt.print("loaded file panel \n")
 }
 
+clearFilePanel :: proc(panel: ^FilePanel) {
+	for &info, idx in panel.directoryList {
+		if idx == 0 {
+			//set the first item in the list always as the folder up
+			// could update this to have a standard go to
+			if len(info.fullpath) > 0 do delete(info.fullpath)
+			continue
+		}
 
-drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
-	rect := rl.Rectangle {
-		x      = panel.topLeft.x,
-		y      = panel.topLeft.y,
-		width  = panel.bottomRight.x - panel.topLeft.x,
-		height = panel.bottomRight.y - panel.topLeft.y,
+		if len(info.name) > 0 do delete(info.name)
+		if len(info.fullpath) > 0 do delete(info.fullpath)
 	}
 
-	rl.DrawRectangleRec(rect, rl.Fade(rl.BEIGE, 0.1))
+	//delete(panel.directoryList)
+}
+
+
+drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
+	rl.DrawRectangleRec(panel.rect, rl.Fade(rl.BEIGE, 0.1))
 
 	// 1. Grab the current mouse coordinates
 	mousePos := rl.GetMousePosition()
@@ -57,7 +66,7 @@ drawFilePanel :: proc(panel: ^FilePanel, app: ^App) {
 		rowRect := rl.Rectangle {
 			x      = panel.topLeft.x,
 			y      = panel.topLeft.y + (f32(idx) * panel.charHeight),
-			width  = rect.width,
+			width  = panel.rect.width,
 			height = panel.charHeight,
 		}
 
@@ -135,9 +144,42 @@ loadDirectory :: proc(filePath: string, panel: ^FilePanel) {
 
 	for &pathInfo, idx in panel.directoryList {
 		if idx == 0 {
+			name := "--------- Favourites --------------"
+			type := os.File_Type.Undetermined
+			pathInfo.name = name
+			pathInfo.type = type
+			continue
+		}
+		if idx == 1 {
+			// Clear the existing fullpath if necessary
+			if len(pathInfo.fullpath) > 0 do delete(pathInfo.fullpath)
+
+			// 1. Get the user's home directory from the environment variables
+			home_dir := os.get_env("HOME", context.allocator)
+
+			// Fallback path if HOME isn't set for some reason
+			fullpath: string
+			if len(home_dir) <= 0 {
+				// 2. Join the home directory with "Documents"
+				fullpath, _ = filepath.join({home_dir, "Documents"})
+				delete(home_dir) // lookup_env allocates, so clean it up
+			} else {
+				fullpath = strings.clone("/")
+			}
+
+			name := "Documents"
+			type := os.File_Type.Directory
+
+			pathInfo.fullpath = fullpath
+			pathInfo.name = name
+			pathInfo.type = type
+			continue
+		}
+
+		if idx == 2 {
 			//set the first item in the list always as the folder up
 			// could update this to have a standard go to
-			if len(pathInfo.name) > 0 do delete(pathInfo.fullpath)
+			if len(pathInfo.fullpath) > 0 do delete(pathInfo.fullpath)
 
 			fullpath := strings.clone(
 				filepath.dir(filepath.dir(infos[panel.directoryCount].fullpath)),
@@ -151,12 +193,39 @@ loadDirectory :: proc(filePath: string, panel: ^FilePanel) {
 			continue
 		}
 
+		if idx == 3 {
+			//set the first item in the list always as the folder up
+			// could update this to have a standard go to
+			if len(pathInfo.fullpath) > 0 do delete(pathInfo.fullpath)
+
+			fullpath := strings.clone(
+				filepath.dir(filepath.dir(infos[panel.directoryCount].fullpath)),
+			)
+			name := "folder up"
+			type := os.File_Type.Directory
+
+			pathInfo.fullpath = fullpath
+			pathInfo.name = name
+			pathInfo.type = type
+			continue
+		}
+
+		if idx == 4 {
+			name := "--------- Current Folder --------------"
+			type := os.File_Type.Undetermined
+			pathInfo.name = name
+			pathInfo.type = type
+			continue
+		}
+
 
 		if len(pathInfo.name) > 0 do delete(pathInfo.name)
-		if len(pathInfo.name) > 0 do delete(pathInfo.fullpath)
-
+		if len(pathInfo.fullpath) > 0 do delete(pathInfo.fullpath)
 		pathInfo = {}
-		if panel.directoryCount >= len(infos) {continue}
+
+		if panel.directoryCount >= len(infos) {
+			continue
+		}
 
 		name := strings.clone(infos[panel.directoryCount].name)
 		path := strings.clone(infos[panel.directoryCount].fullpath)

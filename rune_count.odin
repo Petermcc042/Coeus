@@ -48,49 +48,89 @@ countRunesWorker :: proc(t: ^thread.Thread) {
 	// 1. Slurp the entire file into memory
 	data, err := os.read_entire_file_from_path(view.fileCurrentPath, context.allocator)
 	if err != nil {
-		// You can print the specific error (e.g., 'File Not Found')
 		fmt.eprintfln("1. Error reading file %s: %v", view.fileCurrentPath, err)
-		//view.fileLoadSuccess = false
 		return
 	}
 
-	// 2. Convert bytes to a string and let Odin count the runes
 	file_str := string(data)
 	rune_count: i32 = 0
 	rowCount: i32 = 0
 	fieldCount: i32 = 0
 	inQuotes := false
 
-	// In Odin, looping over a string automatically decodes it rune-by-rune!
+	// Trackers for the current field being processed
+	current_field_idx := 0
+	current_field_len := 0
+
+	// Clear any existing data if this dynamic array is reused
+	clear(&view.fieldRenderWidths)
+
 	for rune in file_str {
 		if rune == '\r' {
 			rune_count += 1
 			continue
 		}
 
-
 		if rune == '"' {
-			if inQuotes {
-				inQuotes = false
-			} else {
-				inQuotes = true
-			}
+			inQuotes = !inQuotes
+			// Optional: If you don't want the quote characters to count
+			// toward the render width, uncomment the next two lines:
+			// rune_count += 1
+			// continue
 		}
 
+		// Check for field boundaries (comma outside quotes, or a newline)
+		if (rune == ',' && !inQuotes) || rune == '\n' {
 
-		if (rune == ',' && inQuotes == false) || rune == '\n' {
-
-			if rowCount < 1 {
-				fieldCount += 1
+			// 1. Cap the field width at 15
+			if current_field_len > 20 {
+				current_field_len = 20
 			}
 
+			// 2. Store or update the max width
+			if rowCount == 0 {
+				// First row: Discovering columns, grow the array naturally
+				append(&view.fieldRenderWidths, i32(current_field_len))
+				fieldCount += 1
+			} else {
+				// Subsequent rows: Array size is locked, update in-place
+				if current_field_idx < len(view.fieldRenderWidths) {
+					view.fieldRenderWidths[current_field_idx] = max(
+						view.fieldRenderWidths[current_field_idx],
+						i32(current_field_len),
+					)
+				}
+			}
+
+			// Reset field length for the next field
+			current_field_len = 0
+			current_field_idx += 1
 
 			if rune == '\n' {
 				rowCount += 1
+				current_field_idx = 0 // Reset to the first column for the new row
 			}
+		} else {
+			// Increment the character count for the current field content
+			// (Excluding the delimiter itself)
+			current_field_len += 1
 		}
 
 		rune_count += 1
+	}
+
+	// Flush the very last field if the file doesn't end with a trailing newline
+	if current_field_len > 0 {
+		if current_field_len > 15 {current_field_len = 15}
+		if rowCount == 0 {
+			append(&view.fieldRenderWidths, i32(current_field_len))
+			fieldCount += 1
+		} else if current_field_idx < len(view.fieldRenderWidths) {
+			view.fieldRenderWidths[current_field_idx] = max(
+				view.fieldRenderWidths[current_field_idx],
+				i32(current_field_len),
+			)
+		}
 	}
 
 	delete(data, context.allocator)
@@ -98,6 +138,4 @@ countRunesWorker :: proc(t: ^thread.Thread) {
 	view.fileNumRunes = rune_count
 	view.fileNumRows = rowCount
 	view.fileNumFields = fieldCount
-	//view.runeCountSuccess = true
-
 }

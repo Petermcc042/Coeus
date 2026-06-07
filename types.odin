@@ -17,20 +17,20 @@ Window :: struct {
 }
 
 App :: struct {
-	pause:                bool,
-	resizeNeeded:         bool,
+	pause:                 bool,
+	resizeNeeded:          bool,
 
 	// input state
-	left_mouse_clicked:   bool,
-	right_mouse_clicked:  bool,
-	toggle_pause:         bool,
-	mouse_world_position: i32,
-	mouse_charBlock_x:    i32, // the mouses character column position
-	mouse_charBlock_y:    i32, // the mouses character row position
-	mouse_fieldNum:       i32, // the mouses field column position
-	doubleClickThreshold: f32, // the mouses field column position
-	lastClickTime:        f32,
-	doubleClick:          bool,
+	left_mouse_clicked:    bool,
+	right_mouse_clicked:   bool,
+	toggle_pause:          bool,
+	mouse_world_position:  i32,
+	mouse_viewCharBlock_x: i32, // the mouses character column position
+	mouse_viewCharBlock_y: i32, // the mouses character row position
+	mouse_fieldNum:        i32, // the mouses field column position
+	doubleClickThreshold:  f32, // the mouses field column position
+	lastClickTime:         f32,
+	doubleClick:           bool,
 }
 
 // contains the info on width and height of a mono character
@@ -43,6 +43,8 @@ CharacterBlock :: struct {
 // this is the actual panel where cells will be shown
 // it contains the information about what file is loaded
 CellsView :: struct {
+	currentPane:        bool,
+	rect:               rl.Rectangle,
 	colors:             []rl.Color,
 	font:               rl.Font,
 	fontSize:           f32,
@@ -56,8 +58,8 @@ CellsView :: struct {
 	charColumns:        i32, // width of the viewer in columns
 	charRows:           i32, // height of the viewer in rows
 	fileRowCharIndices: []RowInfo, // the index positions in []fileRunes that are the start of rows
-	fieldRenderHeights: []i32, // an array containing the height in characters of each row of fields being displayed
-	fieldRenderWidths:  []i32, // an array containing the width in characters of each column of fields being displayed
+	fieldRenderHeights: [dynamic]i32, // an array containing the height in characters of each row of fields being displayed
+	fieldRenderWidths:  [dynamic]i32, // an array containing the width in characters of each column of fields being displayed
 	fileFieldsTypes:    []FieldType,
 
 	// to render
@@ -70,7 +72,15 @@ CellsView :: struct {
 	fileCurrentPath:    string,
 }
 
+// Add this to whatever state struct holds your cellsView
+ColumnState :: struct {
+	dragged_column:  int, // Store the index of the column being dragged, -1 if none
+	is_hovering_any: bool,
+}
+
 FileLoadingInfo :: struct {
+	needsReset:                 bool,
+
 	//this bool controls the whole file loading system
 	fileLoadingUnderway:        bool,
 	fileLoaded:                 bool,
@@ -120,8 +130,10 @@ Header :: struct {
 }
 
 FilePanel :: struct {
+	currentPane:      bool,
 	topLeft:          [2]f32, // x.y coord of the top left of the pane
 	bottomRight:      [2]f32, // x.y coord of the bottom right of the pane
+	rect:             rl.Rectangle,
 	chars:            [10000]rune,
 	rune_index:       i32,
 	font:             rl.Font,

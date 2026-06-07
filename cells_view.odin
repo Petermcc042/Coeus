@@ -31,16 +31,8 @@ loadCellViewFont :: proc(view: ^CellsView, fontSize: f32) {
 }
 
 
-renderCellsView :: proc(cellsView: ^CellsView) {
-	//rl.ClearBackground(rl.DARKBLUE)
-	rect := rl.Rectangle {
-		x      = cellsView.topLeft.x,
-		y      = cellsView.topLeft.y,
-		width  = cellsView.bottomRight.x - cellsView.topLeft.x,
-		height = cellsView.bottomRight.y - cellsView.topLeft.y,
-	}
-
-	rl.DrawRectangleRec(rect, rl.Fade(rl.BLUE, 0.2))
+renderCellsView :: proc(cellsView: ^CellsView, ui_state: ^ColumnState) {
+	rl.DrawRectangleRec(cellsView.rect, rl.Fade(rl.BLUE, 0.2))
 
 
 	currentCol: i32 = 0 // keeps track of the exact character coord
@@ -50,18 +42,19 @@ renderCellsView :: proc(cellsView: ^CellsView) {
 	fileCharIndex: i32 = 0 // keeps track of how far through the file we are
 	inQuotes := false
 
-
 	// find the row we are at
 	// get the char index we want to start at
 	// pass it instead of zero
 	// be sure to render the header then skip to the row
-	fileCharIndex = cellsView.fileRowCharIndices[cellsView.currentFileRow].rowStartIndex
 
-	for i in 0 ..< i32(len(cellsView.fileRowCharIndices)) {
-		if i > cellsView.charRows {break}
 
-		fileCharIndex = cellsView.fileRowCharIndices[i].rowStartIndex
+	for i in 0 ..< min(cellsView.charRows, cellsView.fileNumRows) {
+		fileCharIndex = cellsView.fileRowCharIndices[cellsView.currentFileRow + i].rowStartIndex
+
+		// this loop is to render one line now?
 		for {
+
+			// this section is just a hack to ensure the end of a file breaks the loop
 			char: rune
 			if fileCharIndex >= i32(len(cellsView.fileRunes)) {
 				char = '\n'
@@ -158,18 +151,72 @@ renderCellsView :: proc(cellsView: ^CellsView) {
 	}
 
 
-	cumulativeCharWidth: i32 = 0
-	for charWidth in cellsView.fieldRenderWidths {
-		cumulativeCharWidth += charWidth
-		rl.DrawLine(
-			i32(cellsView.charWidth) * cumulativeCharWidth + i32(cellsView.topLeft.x),
-			i32(cellsView.topLeft.y),
-			i32(cellsView.charWidth) * cumulativeCharWidth + i32(cellsView.topLeft.x),
-			i32(cellsView.bottomRight.y),
-			rl.WHITE,
-		)
+	// 1. Handle active dragging if a column is already grabbed
+	if ui_state.dragged_column != -1 {
+		if rl.IsMouseButtonDown(.LEFT) {
+			mouse_x := rl.GetMouseX()
+
+			// Calculate the X coordinate of the *start* of the dragged column to find the delta
+			col_start_x := i32(cellsView.topLeft.x)
+			for i in 0 ..< ui_state.dragged_column {
+				col_start_x += cellsView.fieldRenderWidths[i] * i32(cellsView.charWidth)
+			}
+
+			// Calculate new width based on mouse position
+			new_width := (mouse_x - col_start_x) / i32(cellsView.charWidth)
+
+			// Enforce a minimum width so columns don't vanish completely
+			if new_width < 2 {new_width = 2}
+
+			cellsView.fieldRenderWidths[ui_state.dragged_column] = new_width
+			rl.SetMouseCursor(.RESIZE_EW)
+		} else {
+			// Mouse released
+			ui_state.dragged_column = -1
+		}
 	}
 
+	// 2. Render lines and check for new hovers/clicks
+	ui_state.is_hovering_any = false
+	mouse_pos := rl.GetMousePosition()
+	cumulativeCharWidth: i32 = 0
+
+	for charWidth, idx in cellsView.fieldRenderWidths {
+		cumulativeCharWidth += charWidth
+
+		line_x := i32(cellsView.charWidth) * cumulativeCharWidth + i32(cellsView.topLeft.x)
+		top_y := i32(cellsView.topLeft.y)
+		bot_y := i32(cellsView.bottomRight.y)
+
+		// Render the column vertical line
+		rl.DrawLine(line_x, top_y, line_x, bot_y, rl.WHITE)
+
+		// Define a small invisible bounding box around the line for easier grabbing (e.g., 6 pixels wide)
+		grab_padding :: 3
+		line_rect := rl.Rectangle {
+			x      = f32(line_x - grab_padding),
+			y      = f32(top_y),
+			width  = f32(grab_padding * 2),
+			height = f32(bot_y - top_y),
+		}
+
+		// Check if mouse is over this specific line
+		if rl.CheckCollisionPointRec(mouse_pos, line_rect) && ui_state.dragged_column == -1 {
+			ui_state.is_hovering_any = true
+			rl.SetMouseCursor(.RESIZE_EW)
+
+			if rl.IsMouseButtonPressed(.LEFT) {
+				ui_state.dragged_column = idx
+			}
+		}
+	}
+
+	// Reset cursor to default if we aren't hovering or dragging a line anymore
+	if !ui_state.is_hovering_any && ui_state.dragged_column == -1 {
+		rl.SetMouseCursor(.DEFAULT)
+	}
+
+	// Render your horizontal header line (unchanged)
 	rl.DrawLine(
 		0 + i32(cellsView.topLeft.x),
 		i32(cellsView.charHeight) + i32(cellsView.topLeft.y),

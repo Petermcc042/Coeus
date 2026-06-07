@@ -21,11 +21,23 @@ process_user_input :: proc(
 ) {
 	m_pos := rl.GetMousePosition()
 
+	relative_x := m_pos.x - view.topLeft.x
+	relative_y := m_pos.y - view.topLeft.y
 	// Calculate tile based on pixel / cell size directly
-	mouse_x := i32(m_pos.x / cellsView.charWidth)
-	mouse_y := i32(m_pos.y / cellsView.charHeight)
+	mouse_x := i32(relative_x / cellsView.charWidth)
+	mouse_y := i32(relative_y / cellsView.charHeight)
 
 	m_worl_pos := mouse_y * cellsView.charColumns + mouse_x
+
+
+	panel.currentPane = false
+	view.currentPane = false
+	if rl.CheckCollisionPointRec(m_pos, panel.rect) {
+		panel.currentPane = true
+	}
+	if rl.CheckCollisionPointRec(m_pos, view.rect) {
+		view.currentPane = true
+	}
 
 	// 2. Find the CSV column index
 	currentFieldNum := -1
@@ -45,8 +57,7 @@ process_user_input :: proc(
 	mouse_y = clamp(mouse_y, 0, cellsView.charRows - 1)
 
 	if rl.IsKeyPressed(.ENTER) {
-		info.fileLoadingUnderway = true
-		info.runeCountNeedsStarted = true
+		copy_runes_to_clipboard(cellsView.fileRunes)
 	}
 
 	if rl.IsKeyPressed(.EQUAL) && rl.IsKeyDown(.LEFT_SHIFT) || rl.IsKeyPressed(.KP_ADD) {
@@ -88,7 +99,8 @@ process_user_input :: proc(
 		} else {
 			if strings.has_suffix(targetFile.fullpath, ".csv") {
 				cellsView.fileCurrentPath = targetFile.fullpath
-				resetFileLoading(view, info)
+				info.fileLoadingUnderway = true
+				info.needsReset = true
 			}
 
 			//load_file_content(targetFile.fullpath)
@@ -130,8 +142,8 @@ process_user_input :: proc(
 	app.right_mouse_clicked = rl.IsMouseButtonDown(.RIGHT)
 	app.toggle_pause = rl.IsKeyPressed(.SPACE)
 	app.mouse_world_position = mouse_y * cellsView.charColumns + mouse_x
-	app.mouse_charBlock_x = mouse_x
-	app.mouse_charBlock_y = mouse_y
+	app.mouse_viewCharBlock_x = mouse_x
+	app.mouse_viewCharBlock_y = mouse_y
 	app.mouse_fieldNum = i32(currentFieldNum)
 	app.doubleClick = doubleClick
 }
